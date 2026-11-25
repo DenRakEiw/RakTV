@@ -132,6 +132,7 @@ class WallpaperService extends ChangeNotifier {
 
       final uri = Uri.parse("https://www.reddit.com/r/$sub/hot.json?limit=60&raw_json=1");
       final req = await client.getUrl(uri);
+      req.headers.add("Cookie", "over18=1");
       final resp = await req.close();
       if (resp.statusCode == 200) {
         final body = await resp.transform(utf8.decoder).join();
@@ -182,8 +183,55 @@ class WallpaperService extends ChangeNotifier {
     } catch (e) {
       debugPrint("Reddit wallpaper fetch error: $e");
     }
+    // Fallback to Wallhaven 16:9 4K Anime API if Reddit rate-limits or age-gates the subreddit
+    final whOk = await fetchWallhavenAnimeWallpaper();
     _isLoadingReddit = false;
     notifyListeners();
+    return whOk;
+  }
+
+  Future<bool> fetchWallhavenAnimeWallpaper([String query = ""]) async {
+    try {
+      final client = HttpClient();
+      client.connectionTimeout = Duration(seconds: 10);
+      client.userAgent = "Mozilla/5.0 (Linux; Android 12; TV) RakTV/1.0";
+      final qParam = query.isNotEmpty ? "&q=${Uri.encodeQueryComponent(query)}" : "";
+      final uri = Uri.parse(
+        "https://wallhaven.cc/api/v1/search?categories=010&purity=100&atleast=1920x1080&ratios=16x9&sorting=random$qParam",
+      );
+      final req = await client.getUrl(uri);
+      final resp = await req.close();
+      if (resp.statusCode == 200) {
+        final body = await resp.transform(utf8.decoder).join();
+        final data = jsonDecode(body) as Map<String, dynamic>;
+        final items = (data["data"] as List<dynamic>?) ?? [];
+        if (items.isNotEmpty) {
+          final item = items[_random.nextInt(items.length)] as Map<String, dynamic>;
+          final imgUrl = (item["path"] ?? "").toString();
+          final res = (item["resolution"] ?? "4K").toString();
+          if (imgUrl.isNotEmpty) {
+            final imgReq = await client.getUrl(Uri.parse(imgUrl));
+            final imgResp = await imgReq.close();
+            if (imgResp.statusCode == 200) {
+              final bytes = await consolidateHttpClientResponseBytes(imgResp);
+              if (bytes.isNotEmpty) {
+                if (_fileInitialized) {
+                  await _wallpaperFile.writeAsBytes(bytes);
+                }
+                _wallpaper = bytes;
+                _activeVideoPath = null;
+                _currentWallpaperCaption = "Wallhaven 4K Anime ($res)";
+                client.close();
+                return true;
+              }
+            }
+          }
+        }
+      }
+      client.close();
+    } catch (e) {
+      debugPrint("Wallhaven fetch error: $e");
+    }
     return false;
   }
 

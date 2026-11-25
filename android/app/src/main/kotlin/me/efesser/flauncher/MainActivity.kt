@@ -219,6 +219,7 @@ class MainActivity : FlutterActivity() {
             .queryIntentActivities(Intent(ACTION_MAIN, null)
                     .addCategory(if (sideloaded) CATEGORY_LAUNCHER else CATEGORY_LEANBACK_LAUNCHER), 0)
             .map(ResolveInfo::activityInfo)
+            .filter { it.packageName != packageName }
 
     private fun buildAppMap(activityInfo: ActivityInfo, sideloaded: Boolean) = mapOf(
             "name" to activityInfo.loadLabel(packageManager).toString(),
