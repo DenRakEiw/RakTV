@@ -2,11 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-/// This traversal policy manage the up and down direction to be totally
-/// predictable.
-/// Going up or down will always go to the next or previous row. All other
-/// traversal policy try to be smart, and in some cases can skip rows when
-/// going up or down.
+/// This traversal policy manages up, down, left, and right directions
+/// predictably across rows and grids, with tolerance for 1.1x scaled focused cards.
 class RowByRowTraversalPolicy extends FocusTraversalPolicy with DirectionalFocusTraversalPolicyMixin {
   @override
   Iterable<FocusNode> sortDescendants(Iterable<FocusNode> descendants, FocusNode currentNode) => descendants;
@@ -34,22 +31,22 @@ class NodeSearcher {
 
   NodeSearcher(this.directionToSearch);
 
-  /// should be called first
   List<CandidateNode> findCandidates(List<FocusNode> nodes, FocusNode from) {
     List<FocusNode> copy = List.from(nodes, growable: true);
+    copy.remove(from);
 
     switch (directionToSearch) {
       case TraversalDirection.up:
-        copy.removeWhere((element) => element.isBelowOrEquals(from));
+        copy.removeWhere((element) => !element.isAbove(from));
         break;
       case TraversalDirection.down:
-        copy.removeWhere((element) => element.isAboveOrEquals(from));
+        copy.removeWhere((element) => !element.isBelow(from));
         break;
       case TraversalDirection.right:
-        copy.removeWhere((element) => element.isLeftToOrEquals(from) || !element.isOnTheSameRow(from));
+        copy.removeWhere((element) => !element.isRightTo(from) || !element.isOnTheSameRow(from));
         break;
       case TraversalDirection.left:
-        copy.removeWhere((element) => element.isRightToOrEquals(from) || !element.isOnTheSameRow(from));
+        copy.removeWhere((element) => !element.isLeftTo(from) || !element.isOnTheSameRow(from));
         break;
     }
     return toCandidateNodes(copy);
@@ -59,77 +56,65 @@ class NodeSearcher {
     List<FocusNode> candidates = toFocusNodes(nodes);
 
     return candidates.reduce((bestNode, challenger) {
-      if (directionToSearch == TraversalDirection.down && challenger.isAbove(bestNode)) {
-        return challenger;
-      } else if (directionToSearch == TraversalDirection.up && challenger.isBelow(bestNode)) {
-        return challenger;
-      } else if (directionToSearch == TraversalDirection.left && challenger.isRightTo(bestNode)) {
-        return challenger;
-      } else if (directionToSearch == TraversalDirection.right && challenger.isLeftTo(bestNode)) {
-        return challenger;
-      }
-      // compute the element which is the closest horizontally
-      if (challenger.isOnTheSameRow(bestNode) && challenger.distance(from) < bestNode.distance(from)) {
-        return challenger;
+      if (directionToSearch == TraversalDirection.down) {
+        if (!challenger.isOnTheSameRow(bestNode)) {
+          return challenger.rect.center.dy < bestNode.rect.center.dy ? challenger : bestNode;
+        }
+        return challenger.horizontalDistance(from) < bestNode.horizontalDistance(from) ? challenger : bestNode;
+      } else if (directionToSearch == TraversalDirection.up) {
+        if (!challenger.isOnTheSameRow(bestNode)) {
+          return challenger.rect.center.dy > bestNode.rect.center.dy ? challenger : bestNode;
+        }
+        return challenger.horizontalDistance(from) < bestNode.horizontalDistance(from) ? challenger : bestNode;
+      } else if (directionToSearch == TraversalDirection.left) {
+        return challenger.rect.center.dx > bestNode.rect.center.dx ? challenger : bestNode;
+      } else if (directionToSearch == TraversalDirection.right) {
+        return challenger.rect.center.dx < bestNode.rect.center.dx ? challenger : bestNode;
       }
       return bestNode;
     });
   }
 }
 
-/// An internal object to use the [NodeSearcher] class as expected
 class CandidateNode {
   final FocusNode node;
 
   CandidateNode(this.node);
 }
 
-/// Some conversion utilities used internally
 List<CandidateNode> toCandidateNodes(List<FocusNode> nodes) => nodes.map((e) => CandidateNode(e)).toList();
 
 List<FocusNode> toFocusNodes(List<CandidateNode> nodes) => nodes.map((e) => e.node).toList();
 
-/// A few extension methods to the [FocusNode] to be able to compare their
-/// respective position easily.
+const double _rowTolerance = 28.0;
+const double _colTolerance = 8.0;
+
 extension Geometry on FocusNode {
+  bool isOnTheSameRow(FocusNode other) {
+    return (rect.center.dy - other.rect.center.dy).abs() <= _rowTolerance;
+  }
+
   bool isBelow(FocusNode other) {
-    return rect.center.dy.round() > other.rect.center.dy.round();
-  }
-
-  bool isBelowOrEquals(FocusNode other) {
-    return rect.center.dy.round() >= other.rect.center.dy.round();
-  }
-
-  bool isRightTo(FocusNode other) {
-    return rect.center.dx.round() > other.rect.center.dx.round();
-  }
-
-  bool isRightToOrEquals(FocusNode other) {
-    return rect.center.dx.round() >= other.rect.center.dx.round();
-  }
-
-  bool isLeftTo(FocusNode other) {
-    return rect.center.dx.round() < other.rect.center.dx.round();
-  }
-
-  bool isLeftToOrEquals(FocusNode other) {
-    return rect.center.dx.round() <= other.rect.center.dx.round();
+    return rect.center.dy - other.rect.center.dy > _rowTolerance;
   }
 
   bool isAbove(FocusNode other) {
-    return rect.center.dy.round() < other.rect.center.dy.round();
+    return other.rect.center.dy - rect.center.dy > _rowTolerance;
   }
 
-  bool isAboveOrEquals(FocusNode other) {
-    return rect.center.dy.round() <= other.rect.center.dy.round();
+  bool isRightTo(FocusNode other) {
+    return rect.center.dx - other.rect.center.dx > _colTolerance;
   }
 
-  bool isOnTheSameRow(FocusNode other) {
-    return rect.center.dy.round() == other.rect.center.dy.round();
+  bool isLeftTo(FocusNode other) {
+    return other.rect.center.dx - rect.center.dx > _colTolerance;
+  }
+
+  double horizontalDistance(FocusNode other) {
+    return (rect.center.dx - other.rect.center.dx).abs();
   }
 
   double distance(FocusNode other) {
-    return sqrt(pow(rect.center.dx.round() - other.rect.center.dx.round(), 2) +
-        pow(rect.center.dy.round() - other.rect.center.dy.round(), 2));
+    return sqrt(pow(rect.center.dx - other.rect.center.dx, 2) + pow(rect.center.dy - other.rect.center.dy, 2));
   }
 }

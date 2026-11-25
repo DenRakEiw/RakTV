@@ -10,7 +10,6 @@
  */
 
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flauncher/database.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -49,6 +48,7 @@ class AppCard extends StatefulWidget {
 class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
   bool _moving = false;
   MemoryImage? _imageProvider;
+  late final FocusNode _focusNode = FocusNode();
   late final AnimationController _animation = AnimationController(
     vsync: Provider.of<TickerModel>(context, listen: false).tickerProvider ?? this,
     duration: Duration(
@@ -60,6 +60,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _focusNode.addListener(_onFocusChanged);
     _animation.addStatusListener((animationStatus) {
       switch (animationStatus) {
         case AnimationStatus.completed:
@@ -75,8 +76,16 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
     });
   }
 
+  void _onFocusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChanged);
+    _focusNode.dispose();
     _animation.dispose();
     super.dispose();
   }
@@ -98,79 +107,89 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
     final isVault = settings.isVaultApp(widget.application.packageName);
     final glassNeon = settings.glassNeonEnabled;
     final neonColor = settings.neonAccentColor;
+    final hasFocus = _focusNode.hasPrimaryFocus;
+
+    if (hasFocus && (settings.appHighlightAnimationEnabled || glassNeon)) {
+      if (!_animation.isAnimating) {
+        _animation.forward();
+      }
+    } else {
+      if (_animation.isAnimating) {
+        _animation.stop();
+      }
+    }
 
     return FocusKeyboardListener(
       onPressed: (key) => _onPressed(context, key),
       onLongPress: (key) => _onLongPress(context, key),
-      builder: (context) {
-        final hasFocus = Focus.of(context).hasFocus;
-        return AspectRatio(
-          aspectRatio: 16 / 9,
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            transformAlignment: Alignment.center,
-            transform: _scaleTransform(context),
-            decoration: glassNeon && hasFocus
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: neonColor.withOpacity(0.65),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  )
-                : null,
-            child: Material(
-              borderRadius: BorderRadius.circular(glassNeon ? 12 : 8),
-              clipBehavior: Clip.antiAlias,
-              color: glassNeon ? Colors.black.withOpacity(0.45) : Theme.of(context).cardColor,
-              elevation: hasFocus ? 16 : 0,
-              shadowColor: glassNeon ? neonColor : Colors.black,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  InkWell(
-                    autofocus: widget.autofocus,
-                    focusColor: Colors.transparent,
-                    onFocusChange: (_) => setState(() {}),
-                    onTap: () => _onPressed(context, null),
-                    onLongPress: () => _onLongPress(context, null),
-                    child: activeBanner != null
-                        ? Ink.image(image: _cachedMemoryImage(activeBanner), fit: BoxFit.cover)
-                        : Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Ink.image(
-                                    image: _cachedMemoryImage(widget.application.icon!),
-                                    height: double.infinity,
+      builder: (context) => AspectRatio(
+        aspectRatio: 16 / 9,
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          transformAlignment: Alignment.center,
+          transform: _scaleTransform(hasFocus),
+          decoration: glassNeon && hasFocus
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: neonColor.withOpacity(0.65),
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                )
+              : null,
+          child: Material(
+            borderRadius: BorderRadius.circular(glassNeon ? 12 : 8),
+            clipBehavior: Clip.antiAlias,
+            color: glassNeon ? Colors.black.withOpacity(0.45) : Theme.of(context).cardColor,
+            elevation: hasFocus ? 16 : 0,
+            shadowColor: glassNeon ? neonColor : Colors.black,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                InkWell(
+                  focusNode: _focusNode,
+                  autofocus: widget.autofocus,
+                  focusColor: Colors.transparent,
+                  onTap: () => _onPressed(context, null),
+                  onLongPress: () => _onLongPress(context, null),
+                  child: activeBanner != null
+                      ? Ink.image(image: _cachedMemoryImage(activeBanner), fit: BoxFit.cover)
+                      : Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: Ink.image(
+                                  image: _cachedMemoryImage(widget.application.icon!),
+                                  height: double.infinity,
+                                ),
+                              ),
+                              Flexible(
+                                flex: 3,
+                                child: Padding(
+                                  padding: EdgeInsets.only(left: 8),
+                                  child: Text(
+                                    widget.application.name,
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 3,
                                   ),
                                 ),
-                                Flexible(
-                                  flex: 3,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(left: 8),
-                                    child: Text(
-                                      widget.application.name,
-                                      style: Theme.of(context).textTheme.bodySmall,
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 3,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                  ),
-                  if (isLocked || isVault)
-                    Positioned(
-                      top: 6,
-                      right: 6,
+                        ),
+                ),
+                if (isLocked || isVault)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: IgnorePointer(
                       child: Container(
                         padding: EdgeInsets.all(4),
                         decoration: BoxDecoration(
@@ -188,60 +207,55 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                         ),
                       ),
                     ),
-                  if (_moving) ..._arrows(),
+                  ),
+                if (_moving) ..._arrows(),
+                IgnorePointer(
+                  child: AnimatedOpacity(
+                    duration: Duration(milliseconds: 160),
+                    curve: Curves.easeOut,
+                    opacity: hasFocus ? 0 : 0.12,
+                    child: Container(color: Colors.black),
+                  ),
+                ),
+                if (hasFocus)
+                  AnimatedBuilder(
+                    animation: _animation,
+                    builder: (context, child) => IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: glassNeon
+                                ? Color.lerp(neonColor, Colors.white, _animation.value * 0.45)!
+                                : (_lastBorderColor = computeBorderColor(_animation.value, _lastBorderColor)),
+                            width: 3.5,
+                          ),
+                          borderRadius: BorderRadius.circular(glassNeon ? 12 : 8),
+                        ),
+                      ),
+                    ),
+                  )
+                else if (glassNeon)
                   IgnorePointer(
-                    child: AnimatedOpacity(
-                      duration: Duration(milliseconds: 200),
-                      curve: Curves.easeInOut,
-                      opacity: hasFocus ? 0 : 0.10,
-                      child: Container(color: Colors.black),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white12, width: 1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                  Selector<SettingsService, bool>(
-                    selector: (_, settingsService) => settingsService.appHighlightAnimationEnabled,
-                    builder: (context, appHighlightAnimationEnabled, __) {
-                      if (appHighlightAnimationEnabled || glassNeon) {
-                        _animation.forward();
-                        return AnimatedBuilder(
-                          animation: _animation,
-                          builder: (context, child) => IgnorePointer(
-                            child: AnimatedContainer(
-                              duration: Duration(milliseconds: 200),
-                              curve: Curves.easeInOut,
-                              decoration: BoxDecoration(
-                                border: Focus.of(context).hasFocus
-                                    ? Border.all(
-                                        color: glassNeon
-                                            ? Color.lerp(neonColor, Colors.white, _animation.value * 0.45)!
-                                            : (_lastBorderColor =
-                                                computeBorderColor(_animation.value, _lastBorderColor)),
-                                        width: 3,
-                                      )
-                                    : (glassNeon ? Border.all(color: Colors.white12, width: 1) : null),
-                                borderRadius: BorderRadius.circular(glassNeon ? 12 : 8),
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-                      _animation.stop();
-                      return SizedBox();
-                    },
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Matrix4 _scaleTransform(BuildContext context) {
+  Matrix4 _scaleTransform(bool hasFocus) {
     final scale = _moving
         ? 1.0
-        : Focus.of(context).hasFocus
-            ? 1.1
+        : hasFocus
+            ? 1.08
             : 1.0;
     return Matrix4.diagonal3Values(scale, scale, 1.0);
   }
