@@ -135,6 +135,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                   InkWell(
                     autofocus: widget.autofocus,
                     focusColor: Colors.transparent,
+                    onFocusChange: (_) => setState(() {}),
                     onTap: () => _onPressed(context, null),
                     onLongPress: () => _onLongPress(context, null),
                     child: activeBanner != null
@@ -208,7 +209,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                               duration: Duration(milliseconds: 200),
                               curve: Curves.easeInOut,
                               decoration: BoxDecoration(
-                                border: hasFocus
+                                border: Focus.of(context).hasFocus
                                     ? Border.all(
                                         color: glassNeon
                                             ? Color.lerp(neonColor, Colors.white, _animation.value * 0.45)!
