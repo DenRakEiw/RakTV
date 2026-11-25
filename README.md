@@ -12,12 +12,15 @@
 
 ## 📸 Live Screenshots
 
-### 🏠 Home Screen (4K Anime Wallpaper, Waifu-Pink Neon Glow & Custom "YouTube FREEMIUM" Banner)
+### 🏠 Home Screen (Jellyfin 16:9 "Newly Added" Poster Row, 4K Anime Wallpaper & Custom "YouTube FREEMIUM" Banner)
 ![RakTV Home Screen](screenshots/raktv_home.png)
 
-| ⚙️ RakTV Pro & Ultra Settings | 🖼️ 4K Anime & Live Video Wallpaper Studio + Icon Reordering |
+| ⚙️ RakTV Pro & Ultra Settings | 🖼️ 4K Anime & Live Video Wallpaper Studio |
 | :---: | :---: |
 | ![RakTV Settings](screenshots/raktv_settings.png) | ![RakTV Wallpaper Studio](screenshots/raktv_wallpapers.png) |
+
+### 🌸 Waifu Poster Mode (Auto-Idle Fade-Out with Floating Glass Clock)
+![RakTV Waifu Poster Mode](screenshots/raktv_poster_mode.png)
 
 ---
 
