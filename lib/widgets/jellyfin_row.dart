@@ -36,7 +36,7 @@ class JellyfinRow extends StatelessWidget {
                       Icon(Icons.movie_filter_outlined, color: accent, size: 20),
                       SizedBox(width: 8),
                       Text(
-                        "Jellyfin • ${jellyfin.serverName}",
+                        "Jellyfin • Newly Added",
                         style: Theme.of(context).textTheme.titleLarge!.copyWith(
                           shadows: [Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 8)],
                         ),
@@ -80,26 +80,46 @@ class _JellyfinPosterCard extends StatefulWidget {
 }
 
 class _JellyfinPosterCardState extends State<_JellyfinPosterCard> {
-  bool _focused = false;
+  late final FocusNode _focusNode = FocusNode();
 
   @override
-  Widget build(BuildContext context) => AspectRatio(
-        aspectRatio: 16 / 9,
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 180),
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  void _onFocusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasFocus = _focusNode.hasPrimaryFocus;
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Transform.scale(
+        scale: hasFocus ? 1.06 : 1.0,
+        child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: _focused ? Border.all(color: widget.accentColor, width: 2.5) : Border.all(color: Colors.white24),
-            boxShadow: _focused
-                ? [BoxShadow(color: widget.accentColor.withOpacity(0.55), blurRadius: 16, spreadRadius: 1)]
-                : null,
+            border: hasFocus ? Border.all(color: widget.accentColor, width: 3.0) : Border.all(color: Colors.white24),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(8),
             child: Material(
               color: Colors.black54,
               child: InkWell(
-                onFocusChange: (hasFocus) => setState(() => _focused = hasFocus),
+                focusNode: _focusNode,
+                focusColor: Colors.transparent,
                 onTap: () => context.read<AppsService>().launchPackage("org.jellyfin.androidtv"),
                 child: Stack(
                   fit: StackFit.expand,
@@ -116,7 +136,7 @@ class _JellyfinPosterCardState extends State<_JellyfinPosterCard> {
                       alignment: Alignment.bottomCenter,
                       child: Container(
                         width: double.infinity,
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.bottomCenter,
@@ -128,7 +148,10 @@ class _JellyfinPosterCardState extends State<_JellyfinPosterCard> {
                           widget.item.subtitle.isNotEmpty
                               ? "${widget.item.name} • ${widget.item.subtitle}"
                               : widget.item.name,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -140,5 +163,7 @@ class _JellyfinPosterCardState extends State<_JellyfinPosterCard> {
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }

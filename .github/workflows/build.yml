@@ -3,6 +3,9 @@ name: Build RakTV APK
 on:
   push:
     branches: [ "master", "main" ]
+    paths-ignore:
+      - 'README.md'
+      - 'screenshots/**'
   workflow_dispatch:
 
 permissions:

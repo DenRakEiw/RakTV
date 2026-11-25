@@ -31,17 +31,15 @@ class _TimeWidgetState extends State<TimeWidget> {
   Timer? _hudTimer;
   int _ramPercent = 0;
   String? _temperature;
+  bool _weatherFetched = false;
 
   @override
   void initState() {
     super.initState();
     _now = DateTime.now();
-    _timer = Timer.periodic(Duration(seconds: 1), (_) => _refreshTime());
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshHud();
-      _fetchWeather();
-    });
-    _hudTimer = Timer.periodic(Duration(seconds: 15), (_) => _refreshHud());
+    _timer = Timer.periodic(Duration(seconds: 5), (_) => _refreshTime());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkHudPolling());
+    _hudTimer = Timer.periodic(Duration(seconds: 30), (_) => _checkHudPolling());
   }
 
   @override
@@ -51,13 +49,21 @@ class _TimeWidgetState extends State<TimeWidget> {
     super.dispose();
   }
 
-  Future<void> _refreshHud() async {
+  Future<void> _checkHudPolling() async {
     if (!mounted) return;
+    final settings = context.read<SettingsService>();
+    if (!settings.systemHudEnabled) return;
+
+    if (!_weatherFetched) {
+      _weatherFetched = true;
+      unawaited(_fetchWeather());
+    }
     try {
       final info = await context.read<AppsService>().getMemoryInfo();
-      if (mounted) {
+      final nextRam = info["usedPercent"] ?? 0;
+      if (mounted && nextRam != _ramPercent) {
         setState(() {
-          _ramPercent = info["usedPercent"] ?? 0;
+          _ramPercent = nextRam;
         });
       }
     } catch (_) {}
@@ -92,6 +98,10 @@ class _TimeWidgetState extends State<TimeWidget> {
           final timeStr = settings.use24HourTimeFormat ? DateFormat.Hm().format(_now) : DateFormat.jm().format(_now);
           final accent = settings.neonAccentColor;
 
+          if (settings.systemHudEnabled && _ramPercent == 0) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _checkHudPolling());
+          }
+
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -99,7 +109,7 @@ class _TimeWidgetState extends State<TimeWidget> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.black45,
+                    color: Colors.black54,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.white24, width: 1),
                   ),
@@ -148,8 +158,11 @@ class _TimeWidgetState extends State<TimeWidget> {
       );
 
   void _refreshTime() {
-    setState(() {
-      _now = DateTime.now();
-    });
+    final now = DateTime.now();
+    if (now.minute != _now.minute || now.hour != _now.hour) {
+      setState(() {
+        _now = now;
+      });
+    }
   }
 }

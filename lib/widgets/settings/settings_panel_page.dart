@@ -323,7 +323,7 @@ class SettingsPanelPage extends StatelessWidget {
             TextField(
               controller: urlCtrl,
               decoration: InputDecoration(
-                labelText: "Server URL (e.g. http://192.168.50.107:8096)",
+                labelText: "Server URL (e.g. http://192.168.1.100:8096)",
               ),
             ),
             SizedBox(height: 12),

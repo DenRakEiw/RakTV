@@ -80,16 +80,21 @@ class ApplicationInfoPanel extends StatelessWidget {
                 Navigator.of(context).pop(ApplicationInfoPanelResult.none);
               },
             ),
-            if (category?.sort == CategorySort.manual)
+            if (category != null)
               TextButton(
                 child: Row(
                   children: [
-                    Icon(Icons.open_with),
+                    Icon(Icons.open_with, color: accent),
                     Container(width: 8),
-                    Text("Reorder", style: Theme.of(context).textTheme.bodyMedium),
+                    Text("Reorder / Move Icon", style: Theme.of(context).textTheme.bodyMedium),
                   ],
                 ),
-                onPressed: () => Navigator.of(context).pop(ApplicationInfoPanelResult.reorderApp),
+                onPressed: () async {
+                  if (category!.sort != CategorySort.manual) {
+                    await context.read<AppsService>().setCategorySort(category!, CategorySort.manual);
+                  }
+                  Navigator.of(context).pop(ApplicationInfoPanelResult.reorderApp);
+                },
               ),
             TextButton(
               child: Row(

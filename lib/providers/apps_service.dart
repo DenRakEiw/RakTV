@@ -19,6 +19,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -61,6 +62,18 @@ class AppsService extends ChangeNotifier {
             final pkg = name.substring("custom_banner_".length, name.length - 4);
             _customBanners[pkg] = await entity.readAsBytes();
           }
+        }
+      }
+      // Auto-load YouTube Freemium custom banner for SmartTube
+      if (!_customBanners.containsKey("org.smarttube.stable")) {
+        final ytFreemium = File("/sdcard/Pictures/youtube_freemium_banner.png");
+        if (await ytFreemium.exists()) {
+          final bytes = await ytFreemium.readAsBytes();
+          await setCustomAppBanner("org.smarttube.stable", bytes);
+        } else {
+          final byteData = await rootBundle.load("assets/youtube_freemium.jpg");
+          final bytes = byteData.buffer.asUint8List();
+          await setCustomAppBanner("org.smarttube.stable", bytes);
         }
       }
     } catch (_) {}
@@ -140,7 +153,24 @@ class AppsService extends ChangeNotifier {
       );
 
   Future<void> _initDefaultCategories() => _database.transaction(() async {
-        final tvApplications = _applications.where((element) => element.sideloaded == false);
+        const preferredOrder = [
+          "org.smarttube.stable",
+          "com.netflix.ninja",
+          "com.amazon.amazonvideo.livingroom",
+          "org.jellyfin.androidtv",
+          "org.xbmc.kodi",
+          "com.tcl.tv",
+          "com.tcl.mediaplayer",
+        ];
+        final tvApplications = _applications.where((element) => element.sideloaded == false).toList()
+          ..sort((a, b) {
+            final ia = preferredOrder.indexOf(a.packageName);
+            final ib = preferredOrder.indexOf(b.packageName);
+            if (ia != -1 && ib != -1) return ia.compareTo(ib);
+            if (ia != -1) return -1;
+            if (ib != -1) return 1;
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          });
         final nonTvApplications = _applications.where((element) => element.sideloaded == true);
         if (tvApplications.isNotEmpty) {
           await addCategory("TV Applications", shouldNotifyListeners: false);
@@ -150,6 +180,10 @@ class AppsService extends ChangeNotifier {
             tvAppsCategory,
             CategoryType.grid,
             shouldNotifyListeners: false,
+          );
+          await setCategorySort(
+            tvAppsCategory,
+            CategorySort.manual,
           );
           for (final app in tvApplications) {
             await addToCategory(app, tvAppsCategory, shouldNotifyListeners: false);

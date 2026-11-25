@@ -47,7 +47,7 @@ class SettingsService extends ChangeNotifier {
   bool get unsplashEnabled => false;
 
   bool get use24HourTimeFormat => _sharedPreferences.getBool(_use24HourTimeFormatKey) ?? true;
-  bool get appHighlightAnimationEnabled => _sharedPreferences.getBool(_appHighlightAnimationEnabledKey) ?? true;
+  bool get appHighlightAnimationEnabled => _sharedPreferences.getBool(_appHighlightAnimationEnabledKey) ?? false;
   String? get gradientUuid => _sharedPreferences.getString(_gradientUuidKey);
   String? get unsplashAuthor => _sharedPreferences.getString(_unsplashAuthorKey);
 
@@ -72,7 +72,7 @@ class SettingsService extends ChangeNotifier {
   bool get jellyfinEnabled => _sharedPreferences.getBool(_jellyfinEnabledKey) ?? true;
   String get jellyfinServerUrl => _sharedPreferences.getString(_jellyfinServerUrlKey) ?? "";
   String get jellyfinApiKey => _sharedPreferences.getString(_jellyfinApiKeyKey) ?? "";
-  bool get systemHudEnabled => _sharedPreferences.getBool(_systemHudEnabledKey) ?? true;
+  bool get systemHudEnabled => _sharedPreferences.getBool(_systemHudEnabledKey) ?? false;
 
   SettingsService(this._sharedPreferences);
 

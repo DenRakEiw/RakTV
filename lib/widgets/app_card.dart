@@ -109,7 +109,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
     final neonColor = settings.neonAccentColor;
     final hasFocus = _focusNode.hasPrimaryFocus;
 
-    if (hasFocus && (settings.appHighlightAnimationEnabled || glassNeon)) {
+    if (hasFocus && settings.appHighlightAnimationEnabled) {
       if (!_animation.isAnimating) {
         _animation.forward();
       }
@@ -124,29 +124,14 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
       onLongPress: (key) => _onLongPress(context, key),
       builder: (context) => AspectRatio(
         aspectRatio: 16 / 9,
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 160),
-          curve: Curves.easeOut,
-          transformAlignment: Alignment.center,
-          transform: _scaleTransform(hasFocus),
-          decoration: glassNeon && hasFocus
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: neonColor.withOpacity(0.65),
-                      blurRadius: 18,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                )
-              : null,
+        child: Transform.scale(
+          scale: _moving ? 1.0 : (hasFocus ? 1.07 : 1.0),
           child: Material(
-            borderRadius: BorderRadius.circular(glassNeon ? 12 : 8),
+            borderRadius: BorderRadius.circular(glassNeon ? 10 : 8),
             clipBehavior: Clip.antiAlias,
-            color: glassNeon ? Colors.black.withOpacity(0.45) : Theme.of(context).cardColor,
-            elevation: hasFocus ? 16 : 0,
-            shadowColor: glassNeon ? neonColor : Colors.black,
+            color: glassNeon ? Colors.black87 : Theme.of(context).cardColor,
+            elevation: hasFocus ? 10 : 0,
+            shadowColor: Colors.black,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -195,7 +180,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                         decoration: BoxDecoration(
                           color: Colors.black87,
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: neonColor.withOpacity(0.8), width: 1),
+                          border: Border.all(color: neonColor, width: 1),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -209,28 +194,27 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                     ),
                   ),
                 if (_moving) ..._arrows(),
-                IgnorePointer(
-                  child: AnimatedOpacity(
-                    duration: Duration(milliseconds: 160),
-                    curve: Curves.easeOut,
-                    opacity: hasFocus ? 0 : 0.12,
-                    child: Container(color: Colors.black),
-                  ),
-                ),
-                if (hasFocus)
+                if (hasFocus && settings.appHighlightAnimationEnabled)
                   AnimatedBuilder(
                     animation: _animation,
                     builder: (context, child) => IgnorePointer(
                       child: Container(
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: glassNeon
-                                ? Color.lerp(neonColor, Colors.white, _animation.value * 0.45)!
-                                : (_lastBorderColor = computeBorderColor(_animation.value, _lastBorderColor)),
-                            width: 3.5,
+                            color: _lastBorderColor = computeBorderColor(_animation.value, _lastBorderColor),
+                            width: 3.0,
                           ),
-                          borderRadius: BorderRadius.circular(glassNeon ? 12 : 8),
+                          borderRadius: BorderRadius.circular(glassNeon ? 10 : 8),
                         ),
+                      ),
+                    ),
+                  )
+                else if (hasFocus)
+                  IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: neonColor, width: 3.0),
+                        borderRadius: BorderRadius.circular(glassNeon ? 10 : 8),
                       ),
                     ),
                   )
@@ -239,7 +223,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.white12, width: 1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
@@ -403,7 +387,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
   }
 
   KeyEventResult _onLongPress(BuildContext context, LogicalKeyboardKey? key) {
-    if (!_moving && (key == null || longPressableKeys.contains(key))) {
+    if (!_moving && (key == null || longPressableKeys.contains(key) || directMenuKeys.contains(key))) {
       _showPanel(context);
       return KeyEventResult.handled;
     }
