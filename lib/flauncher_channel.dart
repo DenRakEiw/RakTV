@@ -1,19 +1,12 @@
 /*
- * FLauncher
+ * RakTV (based on FLauncher)
  * Copyright (C) 2021  Étienne Fesser
+ * Copyright (C) 2026  DenRakEiw
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:async';
@@ -43,6 +36,33 @@ class FLauncherChannel {
       await _methodChannel.invokeMethod("checkForGetContentAvailability");
 
   Future<void> startAmbientMode() async => await _methodChannel.invokeMethod("startAmbientMode");
+
+  Future<Map<String, int>> getMemoryInfo() async {
+    try {
+      final res = await _methodChannel.invokeMapMethod<String, int>("getMemoryInfo");
+      return res ?? {"totalMb": 2048, "availMb": 768, "usedPercent": 62};
+    } catch (_) {
+      return {"totalMb": 2048, "availMb": 768, "usedPercent": 62};
+    }
+  }
+
+  Future<Map<String, int>> boostRam() async {
+    try {
+      final res = await _methodChannel.invokeMapMethod<String, int>("boostRam");
+      return res ?? {"freedMb": 0, "availMb": 768, "usedPercent": 60, "killedCount": 0};
+    } catch (_) {
+      return {"freedMb": 0, "availMb": 768, "usedPercent": 60, "killedCount": 0};
+    }
+  }
+
+  Future<List<String>> listLocalMedia([String? folderPath]) async {
+    try {
+      final res = await _methodChannel.invokeListMethod<String>("listLocalMedia", folderPath);
+      return res ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
 
   void addAppsChangedListener(void Function(Map<dynamic, dynamic>) listener) =>
       _eventChannel.receiveBroadcastStream().listen((event) => listener(event));

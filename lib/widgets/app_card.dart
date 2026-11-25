@@ -1,22 +1,16 @@
 /*
- * FLauncher
+ * RakTV (based on FLauncher)
  * Copyright (C) 2021  Étienne Fesser
+ * Copyright (C) 2026  DenRakEiw
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flauncher/database.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -76,7 +70,6 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
           break;
         case AnimationStatus.forward:
         case AnimationStatus.reverse:
-          // nothing to do
           break;
       }
     });
@@ -96,21 +89,46 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) => FocusKeyboardListener(
-        onPressed: (key) => _onPressed(context, key),
-        onLongPress: (key) => _onLongPress(context, key),
-        builder: (context) => AspectRatio(
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
+    final appsService = context.watch<AppsService>();
+    final customBanner = appsService.getCustomBanner(widget.application.packageName);
+    final activeBanner = customBanner ?? widget.application.banner;
+    final isLocked = settings.isAppLocked(widget.application.packageName);
+    final isVault = settings.isVaultApp(widget.application.packageName);
+    final glassNeon = settings.glassNeonEnabled;
+    final neonColor = settings.neonAccentColor;
+
+    return FocusKeyboardListener(
+      onPressed: (key) => _onPressed(context, key),
+      onLongPress: (key) => _onLongPress(context, key),
+      builder: (context) {
+        final hasFocus = Focus.of(context).hasFocus;
+        return AspectRatio(
           aspectRatio: 16 / 9,
           child: AnimatedContainer(
             duration: Duration(milliseconds: 200),
             curve: Curves.easeInOut,
             transformAlignment: Alignment.center,
             transform: _scaleTransform(context),
+            decoration: glassNeon && hasFocus
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: neonColor.withOpacity(0.65),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  )
+                : null,
             child: Material(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(glassNeon ? 12 : 8),
               clipBehavior: Clip.antiAlias,
-              elevation: Focus.of(context).hasFocus ? 16 : 0,
-              shadowColor: Colors.black,
+              color: glassNeon ? Colors.black.withOpacity(0.45) : Theme.of(context).cardColor,
+              elevation: hasFocus ? 16 : 0,
+              shadowColor: glassNeon ? neonColor : Colors.black,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -119,8 +137,8 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                     focusColor: Colors.transparent,
                     onTap: () => _onPressed(context, null),
                     onLongPress: () => _onLongPress(context, null),
-                    child: widget.application.banner != null
-                        ? Ink.image(image: _cachedMemoryImage(widget.application.banner!), fit: BoxFit.cover)
+                    child: activeBanner != null
+                        ? Ink.image(image: _cachedMemoryImage(activeBanner), fit: BoxFit.cover)
                         : Padding(
                             padding: EdgeInsets.all(8),
                             child: Row(
@@ -148,19 +166,40 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                             ),
                           ),
                   ),
+                  if (isLocked || isVault)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: neonColor.withOpacity(0.8), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isVault) Icon(Icons.visibility_off, size: 13, color: neonColor),
+                            if (isVault && isLocked) SizedBox(width: 3),
+                            if (isLocked) Icon(Icons.lock_outline, size: 13, color: Colors.amberAccent),
+                          ],
+                        ),
+                      ),
+                    ),
                   if (_moving) ..._arrows(),
                   IgnorePointer(
                     child: AnimatedOpacity(
                       duration: Duration(milliseconds: 200),
                       curve: Curves.easeInOut,
-                      opacity: Focus.of(context).hasFocus ? 0 : 0.10,
+                      opacity: hasFocus ? 0 : 0.10,
                       child: Container(color: Colors.black),
                     ),
                   ),
                   Selector<SettingsService, bool>(
                     selector: (_, settingsService) => settingsService.appHighlightAnimationEnabled,
                     builder: (context, appHighlightAnimationEnabled, __) {
-                      if (appHighlightAnimationEnabled) {
+                      if (appHighlightAnimationEnabled || glassNeon) {
                         _animation.forward();
                         return AnimatedBuilder(
                           animation: _animation,
@@ -169,13 +208,16 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                               duration: Duration(milliseconds: 200),
                               curve: Curves.easeInOut,
                               decoration: BoxDecoration(
-                                border: Focus.of(context).hasFocus
+                                border: hasFocus
                                     ? Border.all(
-                                        color: _lastBorderColor =
-                                            computeBorderColor(_animation.value, _lastBorderColor),
-                                        width: 3)
-                                    : null,
-                                borderRadius: BorderRadius.circular(8),
+                                        color: glassNeon
+                                            ? Color.lerp(neonColor, Colors.white, _animation.value * 0.45)!
+                                            : (_lastBorderColor =
+                                                computeBorderColor(_animation.value, _lastBorderColor)),
+                                        width: 3,
+                                      )
+                                    : (glassNeon ? Border.all(color: Colors.white12, width: 1) : null),
+                                borderRadius: BorderRadius.circular(glassNeon ? 12 : 8),
                               ),
                             ),
                           ),
@@ -189,8 +231,10 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
               ),
             ),
           ),
-        ),
-      );
+        );
+      },
+    );
+  }
 
   Matrix4 _scaleTransform(BuildContext context) {
     final scale = _moving
@@ -242,11 +286,105 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
         widget.onMoveEnd();
       }
       return KeyEventResult.handled;
-    } else if (_validationKeys.contains(key)) {
-      context.read<AppsService>().launchApp(widget.application);
+    } else if (key == null || _validationKeys.contains(key)) {
+      _handleLaunch(context);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
+  }
+
+  Future<void> _handleLaunch(BuildContext context) async {
+    final settings = context.read<SettingsService>();
+    final appsService = context.read<AppsService>();
+    if (settings.isAppLocked(widget.application.packageName)) {
+      final unlocked = await _showPinUnlockDialog(context, settings.neonAccentColor);
+      if (!unlocked) return;
+    }
+    await appsService.launchApp(widget.application);
+  }
+
+  Future<bool> _showPinUnlockDialog(BuildContext context, Color accentColor) async {
+    final targetSeq = [
+      LogicalKeyboardKey.arrowUp,
+      LogicalKeyboardKey.arrowUp,
+      LogicalKeyboardKey.arrowDown,
+      LogicalKeyboardKey.arrowDown,
+    ];
+    final entered = <LogicalKeyboardKey>[];
+
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => RawKeyboardListener(
+          focusNode: FocusNode()..requestFocus(),
+          autofocus: true,
+          onKey: (event) {
+            if (event is RawKeyDownEvent) {
+              if ([
+                LogicalKeyboardKey.arrowUp,
+                LogicalKeyboardKey.arrowDown,
+                LogicalKeyboardKey.arrowLeft,
+                LogicalKeyboardKey.arrowRight,
+              ].contains(event.logicalKey)) {
+                setDialogState(() {
+                  entered.add(event.logicalKey);
+                });
+                if (entered.length == targetSeq.length) {
+                  bool match = true;
+                  for (int i = 0; i < targetSeq.length; i++) {
+                    if (entered[i] != targetSeq[i]) match = false;
+                  }
+                  if (match) {
+                    Navigator.of(dialogCtx).pop(true);
+                  } else {
+                    setDialogState(() => entered.clear());
+                  }
+                }
+              }
+            }
+          },
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: accentColor, width: 2),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.lock_outline, color: accentColor),
+                SizedBox(width: 8),
+                Text("App Locked • ${widget.application.name}"),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("Enter D-Pad unlock sequence on your remote:"),
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    4,
+                    (i) => Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: i < entered.length ? accentColor : Colors.white24,
+                        child: Icon(
+                          i < entered.length ? Icons.check : Icons.fiber_manual_record,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return res == true;
   }
 
   KeyEventResult _onLongPress(BuildContext context, LogicalKeyboardKey? key) {

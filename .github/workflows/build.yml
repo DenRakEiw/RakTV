@@ -1,0 +1,56 @@
+name: Build RakTV APK
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Universal Android TV APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout RakTV Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Setup Flutter 3.7.5
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.7.5'
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Universal Release APK
+        run: flutter build apk --release --no-shrink
+
+      - name: Prepare Release APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk RakTV-universal-release.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RakTV-universal-release-apk
+          path: RakTV-universal-release.apk
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            gh release upload v1.0.0 RakTV-universal-release.apk --clobber
+          else
+            gh release create v1.0.0 RakTV-universal-release.apk \
+              --title "RakTV v1.0.0 — Custom 4K Anime, Live-Wallpaper & Jellyfin Edition" \
+              --notes "Automated build of RakTV v1.0.0 (based on FLauncher v0.18.0 by Étienne Fesser). Supports 32-bit (armeabi-v7a) and 64-bit (arm64-v8a) Android TV / Google TV devices."
+          fi

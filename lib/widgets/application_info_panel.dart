@@ -1,23 +1,19 @@
 /*
- * FLauncher
+ * RakTV (based on FLauncher)
  * Copyright (C) 2021  Étienne Fesser
+ * Copyright (C) 2026  DenRakEiw
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+import 'dart:io';
 
 import 'package:flauncher/database.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/right_panel_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -32,7 +28,16 @@ class ApplicationInfoPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => RightPanelDialog(
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
+    final appsService = context.watch<AppsService>();
+    final isLocked = settings.isAppLocked(application.packageName);
+    final isVault = settings.isVaultApp(application.packageName);
+    final hasCustomBanner = appsService.hasCustomBanner(application.packageName);
+    final accent = settings.neonAccentColor;
+
+    return RightPanelDialog(
+      child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -103,7 +108,100 @@ class ApplicationInfoPanel extends StatelessWidget {
                 Navigator.of(context).pop(ApplicationInfoPanelResult.none);
               },
             ),
-            if (category != null)
+            Divider(),
+            // RakTV Custom Pro Features
+            TextButton(
+              child: Row(
+                children: [
+                  Icon(Icons.image_outlined, color: accent),
+                  Container(width: 8),
+                  Flexible(
+                    child: Text(
+                      "Custom Banner / Icon",
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+              onPressed: () async {
+                final picked = await appsService.pickCustomAppBanner(application.packageName);
+                if (!picked) {
+                  final localFiles = (await appsService.fLauncherChannel.listLocalMedia())
+                      .where((p) => p.toLowerCase().endsWith(".png") || p.toLowerCase().endsWith(".jpg") || p.toLowerCase().endsWith(".webp"))
+                      .toList();
+                  if (localFiles.isNotEmpty) {
+                    await showDialog(
+                      context: context,
+                      builder: (dCtx) => AlertDialog(
+                        title: Text("Select Local Banner Image"),
+                        content: SizedBox(
+                          width: 400,
+                          height: 260,
+                          child: ListView.builder(
+                            itemCount: localFiles.length,
+                            itemBuilder: (_, idx) => ListTile(
+                              leading: Icon(Icons.image, color: accent),
+                              title: Text(localFiles[idx].split('/').last),
+                              subtitle: Text(localFiles[idx]),
+                              onTap: () async {
+                                final bytes = await File(localFiles[idx]).readAsBytes();
+                                await appsService.setCustomAppBanner(application.packageName, bytes);
+                                Navigator.of(dCtx).pop();
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            if (hasCustomBanner)
+              TextButton(
+                child: Row(
+                  children: [
+                    Icon(Icons.restore, color: Colors.orangeAccent),
+                    Container(width: 8),
+                    Text("Reset Custom Banner", style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ),
+                onPressed: () async {
+                  await appsService.clearCustomAppBanner(application.packageName);
+                },
+              ),
+            TextButton(
+              child: Row(
+                children: [
+                  Icon(isLocked ? Icons.lock_open : Icons.lock_outline, color: Colors.amberAccent),
+                  Container(width: 8),
+                  Flexible(
+                    child: Text(
+                      isLocked ? "Unlock App (Remove PIN)" : "Lock App (D-Pad PIN: ⬆️⬆️⬇️⬇️)",
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+              onPressed: () => settings.toggleAppLock(application.packageName),
+            ),
+            TextButton(
+              child: Row(
+                children: [
+                  Icon(isVault ? Icons.vpn_key_off : Icons.vpn_key, color: accent),
+                  Container(width: 8),
+                  Flexible(
+                    child: Text(
+                      isVault ? "Remove from Hidden Vault" : "Move to Hidden Vault 🕵️",
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+              onPressed: () => settings.toggleVaultApp(application.packageName),
+            ),
+            if (category != null) ...[
+              Divider(),
               TextButton(
                 child: Row(
                   children: [
@@ -124,6 +222,7 @@ class ApplicationInfoPanel extends StatelessWidget {
                   Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                 },
               ),
+            ],
             Divider(),
             TextButton(
               child: Row(
@@ -150,7 +249,9 @@ class ApplicationInfoPanel extends StatelessWidget {
             ),
           ],
         ),
-      );
+      ),
+    );
+  }
 }
 
 enum ApplicationInfoPanelResult { none, reorderApp }

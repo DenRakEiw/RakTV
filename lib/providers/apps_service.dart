@@ -1,23 +1,17 @@
 /*
- * FLauncher
+ * RakTV (based on FLauncher)
  * Copyright (C) 2021  Étienne Fesser
+ * Copyright (C) 2026  DenRakEiw
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flauncher/database.dart';
@@ -25,6 +19,8 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AppsService extends ChangeNotifier {
   final FLauncherChannel _fLauncherChannel;
@@ -33,8 +29,12 @@ class AppsService extends ChangeNotifier {
 
   List<App> _applications = [];
   List<CategoryWithApps> _categoriesWithApps = [];
+  final Map<String, Uint8List> _customBanners = {};
+  Directory? _docsDir;
 
   bool get initialized => _initialized;
+
+  FLauncherChannel get fLauncherChannel => _fLauncherChannel;
 
   List<App> get applications => UnmodifiableListView(_applications);
 
@@ -46,7 +46,64 @@ class AppsService extends ChangeNotifier {
     _init();
   }
 
+  Uint8List? getCustomBanner(String packageName) => _customBanners[packageName];
+
+  bool hasCustomBanner(String packageName) => _customBanners.containsKey(packageName);
+
+  Future<void> _loadCustomBanners() async {
+    try {
+      _docsDir = await getApplicationDocumentsDirectory();
+      final files = _docsDir!.listSync();
+      for (final entity in files) {
+        if (entity is File) {
+          final name = entity.path.split(Platform.pathSeparator).last;
+          if (name.startsWith("custom_banner_") && name.endsWith(".img")) {
+            final pkg = name.substring("custom_banner_".length, name.length - 4);
+            _customBanners[pkg] = await entity.readAsBytes();
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> pickCustomAppBanner(String packageName) async {
+    try {
+      if (await _fLauncherChannel.checkForGetContentAvailability()) {
+        final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+        if (picked != null) {
+          final bytes = await picked.readAsBytes();
+          await setCustomAppBanner(packageName, bytes);
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  Future<void> setCustomAppBanner(String packageName, Uint8List bytes) async {
+    _docsDir ??= await getApplicationDocumentsDirectory();
+    final file = File("${_docsDir!.path}/custom_banner_$packageName.img");
+    await file.writeAsBytes(bytes);
+    _customBanners[packageName] = bytes;
+    notifyListeners();
+  }
+
+  Future<void> clearCustomAppBanner(String packageName) async {
+    _docsDir ??= await getApplicationDocumentsDirectory();
+    final file = File("${_docsDir!.path}/custom_banner_$packageName.img");
+    if (await file.exists()) {
+      await file.delete();
+    }
+    _customBanners.remove(packageName);
+    notifyListeners();
+  }
+
+  Future<Map<String, int>> getMemoryInfo() => _fLauncherChannel.getMemoryInfo();
+
+  Future<Map<String, int>> boostRam() => _fLauncherChannel.boostRam();
+
   Future<void> _init() async {
+    await _loadCustomBanners();
     await _refreshState(shouldNotifyListeners: false);
     if (_database.wasCreated) {
       await _initDefaultCategories();
@@ -144,6 +201,8 @@ class AppsService extends ChangeNotifier {
   }
 
   Future<void> launchApp(App app) => _fLauncherChannel.launchApp(app.packageName);
+
+  Future<void> launchPackage(String packageName) => _fLauncherChannel.launchApp(packageName);
 
   Future<void> openAppInfo(App app) => _fLauncherChannel.openAppInfo(app.packageName);
 

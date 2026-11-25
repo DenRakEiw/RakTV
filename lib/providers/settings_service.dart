@@ -1,86 +1,121 @@
 /*
- * FLauncher
+ * RakTV (based on FLauncher)
  * Copyright (C) 2021  Étienne Fesser
+ * Copyright (C) 2026  DenRakEiw
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:async';
 
-import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_remote_config/firebase_remote_config.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const _crashReportsEnabledKey = "crash_reports_enabled";
-const _analyticsEnabledKey = "analytics_enabled";
 const _use24HourTimeFormatKey = "use_24_hour_time_format";
 const _appHighlightAnimationEnabledKey = "app_highlight_animation_enabled";
 const _gradientUuidKey = "gradient_uuid";
-const _unsplashEnabledKey = "unsplash_enabled";
 const _unsplashAuthorKey = "unsplash_author";
+
+// RakTV Custom Keys
+const _redditSubredditKey = "raktv_reddit_subreddit";
+const _vaultSubredditKey = "raktv_vault_subreddit";
+const _wallpaperSourceKey = "raktv_wallpaper_source"; // 'reddit', 'local_folder', 'video', 'custom', 'gradient'
+const _wallpaperIntervalMinutesKey = "raktv_wallpaper_interval_minutes";
+const _localWallpaperFolderKey = "raktv_local_wallpaper_folder";
+const _videoWallpaperPathKey = "raktv_video_wallpaper_path";
+const _posterIdleSecondsKey = "raktv_poster_idle_seconds";
+const _glassNeonEnabledKey = "raktv_glass_neon_enabled";
+const _neonAccentColorKey = "raktv_neon_accent_color";
+const _customFontFamilyKey = "raktv_custom_font_family";
+const _nightDimmerLevelKey = "raktv_night_dimmer_level";
+const _lockedPackagesKey = "raktv_locked_packages";
+const _vaultPackagesKey = "raktv_vault_packages";
+const _jellyfinEnabledKey = "raktv_jellyfin_enabled";
+const _jellyfinServerUrlKey = "raktv_jellyfin_server_url";
+const _jellyfinApiKeyKey = "raktv_jellyfin_api_key";
+const _systemHudEnabledKey = "raktv_system_hud_enabled";
 
 class SettingsService extends ChangeNotifier {
   final SharedPreferences _sharedPreferences;
-  final FirebaseCrashlytics _firebaseCrashlytics;
-  final FirebaseAnalytics _firebaseAnalytics;
-  final FirebaseRemoteConfig _firebaseRemoteConfig;
-  late final Timer _remoteConfigRefreshTimer;
+  bool _vaultUnlocked = false;
 
-  bool get crashReportsEnabled => _sharedPreferences.getBool(_crashReportsEnabledKey) ?? true;
-
-  bool get analyticsEnabled => _sharedPreferences.getBool(_analyticsEnabledKey) ?? true;
+  bool get crashReportsEnabled => false;
+  bool get analyticsEnabled => false;
+  bool get unsplashEnabled => false;
 
   bool get use24HourTimeFormat => _sharedPreferences.getBool(_use24HourTimeFormatKey) ?? true;
-
   bool get appHighlightAnimationEnabled => _sharedPreferences.getBool(_appHighlightAnimationEnabledKey) ?? true;
-
   String? get gradientUuid => _sharedPreferences.getString(_gradientUuidKey);
-
-  bool get unsplashEnabled => _firebaseRemoteConfig.getBool(_unsplashEnabledKey);
-
   String? get unsplashAuthor => _sharedPreferences.getString(_unsplashAuthorKey);
 
-  SettingsService(
-    this._sharedPreferences,
-    this._firebaseCrashlytics,
-    this._firebaseAnalytics,
-    this._firebaseRemoteConfig,
-  ) {
-    _firebaseCrashlytics.setCrashlyticsCollectionEnabled(kReleaseMode && crashReportsEnabled);
-    _firebaseAnalytics.setAnalyticsCollectionEnabled(kReleaseMode && analyticsEnabled);
-    _remoteConfigRefreshTimer = Timer.periodic(Duration(hours: 6, minutes: 1), (_) => _refreshFirebaseRemoteConfig());
-  }
+  // RakTV Getters
+  String get redditSubreddit => _sharedPreferences.getString(_redditSubredditKey) ?? "AnimeWallpaper";
+  String get vaultSubreddit => _sharedPreferences.getString(_vaultSubredditKey) ?? "Waifu";
+  String get wallpaperSource => _sharedPreferences.getString(_wallpaperSourceKey) ?? "reddit";
+  int get wallpaperIntervalMinutes => _sharedPreferences.getInt(_wallpaperIntervalMinutesKey) ?? 15;
+  String get localWallpaperFolder => _sharedPreferences.getString(_localWallpaperFolderKey) ?? "/sdcard/Pictures";
+  String? get videoWallpaperPath => _sharedPreferences.getString(_videoWallpaperPathKey);
+  int get posterIdleSeconds => _sharedPreferences.getInt(_posterIdleSecondsKey) ?? 60;
+  bool get glassNeonEnabled => _sharedPreferences.getBool(_glassNeonEnabledKey) ?? true;
+  int get neonAccentColorValue => _sharedPreferences.getInt(_neonAccentColorKey) ?? 0xFFFF2A85;
+  Color get neonAccentColor => Color(neonAccentColorValue);
+  String get customFontFamily => _sharedPreferences.getString(_customFontFamilyKey) ?? "Roboto";
+  double get nightDimmerLevel => _sharedPreferences.getDouble(_nightDimmerLevelKey) ?? 0.15;
 
-  @override
-  void dispose() {
-    _remoteConfigRefreshTimer.cancel();
-    super.dispose();
-  }
+  List<String> get lockedPackages => _sharedPreferences.getStringList(_lockedPackagesKey) ?? [];
+  List<String> get vaultPackages => _sharedPreferences.getStringList(_vaultPackagesKey) ?? [];
+  bool get vaultUnlocked => _vaultUnlocked;
 
-  Future<void> setCrashReportsEnabled(bool value) async {
-    _firebaseCrashlytics.setCrashlyticsCollectionEnabled(kReleaseMode && value);
-    await _sharedPreferences.setBool(_crashReportsEnabledKey, value);
+  bool get jellyfinEnabled => _sharedPreferences.getBool(_jellyfinEnabledKey) ?? true;
+  String get jellyfinServerUrl => _sharedPreferences.getString(_jellyfinServerUrlKey) ?? "";
+  String get jellyfinApiKey => _sharedPreferences.getString(_jellyfinApiKeyKey) ?? "";
+  bool get systemHudEnabled => _sharedPreferences.getBool(_systemHudEnabledKey) ?? true;
+
+  SettingsService(this._sharedPreferences);
+
+  bool isAppLocked(String packageName) => lockedPackages.contains(packageName);
+
+  bool isVaultApp(String packageName) => vaultPackages.contains(packageName);
+
+  Future<void> toggleAppLock(String packageName) async {
+    final current = List<String>.from(lockedPackages);
+    if (current.contains(packageName)) {
+      current.remove(packageName);
+    } else {
+      current.add(packageName);
+    }
+    await _sharedPreferences.setStringList(_lockedPackagesKey, current);
     notifyListeners();
   }
 
-  Future<void> setAnalyticsEnabled(bool value) async {
-    _firebaseAnalytics.setAnalyticsCollectionEnabled(kReleaseMode && value);
-    await _sharedPreferences.setBool(_analyticsEnabledKey, value);
+  Future<void> toggleVaultApp(String packageName) async {
+    final current = List<String>.from(vaultPackages);
+    if (current.contains(packageName)) {
+      current.remove(packageName);
+    } else {
+      current.add(packageName);
+    }
+    await _sharedPreferences.setStringList(_vaultPackagesKey, current);
     notifyListeners();
   }
+
+  void setVaultUnlocked(bool unlocked) {
+    if (_vaultUnlocked != unlocked) {
+      _vaultUnlocked = unlocked;
+      notifyListeners();
+    }
+  }
+
+  void toggleVaultUnlocked() {
+    _vaultUnlocked = !_vaultUnlocked;
+    notifyListeners();
+  }
+
+  Future<void> setCrashReportsEnabled(bool value) async {}
+  Future<void> setAnalyticsEnabled(bool value) async {}
 
   Future<void> setUse24HourTimeFormat(bool value) async {
     await _sharedPreferences.setBool(_use24HourTimeFormatKey, value);
@@ -106,15 +141,87 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _refreshFirebaseRemoteConfig() async {
-    bool updated = false;
-    try {
-      updated = await _firebaseRemoteConfig.fetchAndActivate();
-    } catch (e) {
-      debugPrint("Could not refresh Firebase Remote Config: $e");
+  Future<void> setRedditSubreddit(String value) async {
+    final cleaned = value.trim().replaceAll("r/", "").replaceAll("/", "");
+    await _sharedPreferences.setString(_redditSubredditKey, cleaned.isEmpty ? "AnimeWallpaper" : cleaned);
+    await _sharedPreferences.setString(_wallpaperSourceKey, "reddit");
+    notifyListeners();
+  }
+
+  Future<void> setVaultSubreddit(String value) async {
+    final cleaned = value.trim().replaceAll("r/", "").replaceAll("/", "");
+    await _sharedPreferences.setString(_vaultSubredditKey, cleaned.isEmpty ? "Waifu" : cleaned);
+    notifyListeners();
+  }
+
+  Future<void> setWallpaperSource(String value) async {
+    await _sharedPreferences.setString(_wallpaperSourceKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setWallpaperIntervalMinutes(int minutes) async {
+    await _sharedPreferences.setInt(_wallpaperIntervalMinutesKey, minutes);
+    notifyListeners();
+  }
+
+  Future<void> setLocalWallpaperFolder(String folderPath) async {
+    await _sharedPreferences.setString(_localWallpaperFolderKey, folderPath.trim());
+    await _sharedPreferences.setString(_wallpaperSourceKey, "local_folder");
+    notifyListeners();
+  }
+
+  Future<void> setVideoWallpaperPath(String? path) async {
+    if (path == null || path.trim().isEmpty) {
+      await _sharedPreferences.remove(_videoWallpaperPathKey);
+    } else {
+      await _sharedPreferences.setString(_videoWallpaperPathKey, path.trim());
+      await _sharedPreferences.setString(_wallpaperSourceKey, "video");
     }
-    if (updated) {
-      notifyListeners();
-    }
+    notifyListeners();
+  }
+
+  Future<void> setPosterIdleSeconds(int seconds) async {
+    await _sharedPreferences.setInt(_posterIdleSecondsKey, seconds);
+    notifyListeners();
+  }
+
+  Future<void> setGlassNeonEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_glassNeonEnabledKey, enabled);
+    notifyListeners();
+  }
+
+  Future<void> setNeonAccentColorValue(int colorValue) async {
+    await _sharedPreferences.setInt(_neonAccentColorKey, colorValue);
+    notifyListeners();
+  }
+
+  Future<void> setCustomFontFamily(String fontFamily) async {
+    await _sharedPreferences.setString(_customFontFamilyKey, fontFamily);
+    notifyListeners();
+  }
+
+  Future<void> setNightDimmerLevel(double level) async {
+    await _sharedPreferences.setDouble(_nightDimmerLevelKey, level.clamp(0.0, 0.75));
+    notifyListeners();
+  }
+
+  Future<void> setJellyfinEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_jellyfinEnabledKey, enabled);
+    notifyListeners();
+  }
+
+  Future<void> setJellyfinServerUrl(String url) async {
+    await _sharedPreferences.setString(_jellyfinServerUrlKey, url.trim());
+    notifyListeners();
+  }
+
+  Future<void> setJellyfinApiKey(String apiKey) async {
+    await _sharedPreferences.setString(_jellyfinApiKeyKey, apiKey.trim());
+    notifyListeners();
+  }
+
+  Future<void> setSystemHudEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_systemHudEnabledKey, enabled);
+    notifyListeners();
   }
 }
