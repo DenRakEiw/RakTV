@@ -11,6 +11,7 @@
 
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/frigate_service.dart';
 import 'package:flauncher/providers/jellyfin_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/ticker_model.dart';
@@ -66,6 +67,10 @@ class FLauncherApp extends StatelessWidget {
           ChangeNotifierProxyProvider<SettingsService, JellyfinService>(
             create: (_) => JellyfinService(),
             update: (_, settingsService, jellyfinService) => jellyfinService!..settingsService = settingsService,
+          ),
+          ChangeNotifierProxyProvider<SettingsService, FrigateService>(
+            create: (_) => FrigateService(),
+            update: (_, settingsService, frigateService) => frigateService!..settingsService = settingsService,
           ),
           Provider<TickerModel>(create: (context) => TickerModel(null)),
         ],

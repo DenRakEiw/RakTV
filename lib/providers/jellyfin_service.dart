@@ -21,12 +21,22 @@ class JellyfinItem {
   final String name;
   final String subtitle;
   final String imageUrl;
+  final String backdropUrl;
+  final String overview;
+  final String rating;
+  final String runtime;
+  final List<String> badges;
 
   JellyfinItem({
     required this.id,
     required this.name,
     required this.subtitle,
     required this.imageUrl,
+    required this.backdropUrl,
+    this.overview = "",
+    this.rating = "",
+    this.runtime = "",
+    this.badges = const [],
   });
 }
 
@@ -42,9 +52,18 @@ class JellyfinService extends ChangeNotifier {
   final List<String> _discoveredServers = [];
   int _discoveredIndex = 0;
   List<JellyfinItem> _latestItems = [];
+  JellyfinItem? _focusedItem;
 
   bool get serverOnline => _serverOnline;
   String get serverName => _serverName;
+  JellyfinItem? get focusedItem => _focusedItem;
+
+  void setFocusedItem(JellyfinItem? item) {
+    if (_focusedItem?.id != item?.id) {
+      _focusedItem = item;
+      notifyListeners();
+    }
+  }
   String get activeServerUrl {
     final configured = _settingsService?.jellyfinServerUrl ?? "";
     if (configured.isNotEmpty) return configured;
@@ -196,7 +215,8 @@ class JellyfinService extends ChangeNotifier {
       if (_serverOnline && apiKey.isNotEmpty) {
         final itemsUri = Uri.parse(
           "$baseUrl/Items?Recursive=true&IncludeItemTypes=Movie,Episode,Series"
-          "&Fields=Path&SortBy=DateCreated&SortOrder=Descending&Limit=2000",
+          "&Fields=Path,Overview,CommunityRating,RunTimeTicks,Genres,MediaStreams"
+          "&SortBy=DateCreated&SortOrder=Descending&Limit=250",
         );
         final itemsReq = await client.getUrl(itemsUri);
         itemsReq.headers.add("Authorization", 'MediaBrowser Token="$apiKey"');
@@ -245,6 +265,81 @@ class JellyfinService extends ChangeNotifier {
                 ? "Thumb"
                 : (tags.containsKey("Primary") ? "Primary" : "");
             if (imgType.isEmpty) continue;
+
+            final backdropTags = (item["BackdropImageTags"] as List<dynamic>?) ?? [];
+            final String backdropUrl;
+            if (backdropTags.isNotEmpty) {
+              backdropUrl = "$baseUrl/Items/$id/Images/Backdrop?maxWidth=1920&quality=80";
+            } else if (tags.containsKey("Thumb")) {
+              backdropUrl = "$baseUrl/Items/$id/Images/Thumb?maxWidth=1920&quality=80";
+            } else {
+              backdropUrl = "$baseUrl/Items/$id/Images/Primary?maxWidth=1280&quality=80";
+            }
+
+            String rating = "";
+            if (item["CommunityRating"] is num) {
+              rating = "⭐ ${(item["CommunityRating"] as num).toStringAsFixed(1)}";
+            }
+
+            String runtime = "";
+            if (item["RunTimeTicks"] is num) {
+              final totalMin = ((item["RunTimeTicks"] as num).toInt() ~/ 600000000);
+              if (totalMin >= 60) {
+                runtime = "${totalMin ~/ 60}h ${totalMin % 60}m";
+              } else if (totalMin > 0) {
+                runtime = "${totalMin}m";
+              }
+            }
+
+            final badges = <String>[];
+            final streams = (item["MediaStreams"] as List<dynamic>?) ?? [];
+            String? vRes;
+            String? vCodec;
+            String? aCodec;
+            for (final s in streams) {
+              if (s is Map<String, dynamic>) {
+                final sType = (s["Type"] ?? "").toString();
+                if (sType == "Video" && vCodec == null) {
+                  final w = (s["Width"] is num) ? (s["Width"] as num).toInt() : 0;
+                  if (w >= 3800) vRes = "4K";
+                  else if (w >= 1900) vRes = "1080p";
+                  else if (w >= 1200) vRes = "720p";
+                  final c = (s["Codec"] ?? "").toString().toUpperCase();
+                  if (c.isNotEmpty) vCodec = c == "H264" ? "H.264" : c;
+                } else if (sType == "Audio" && aCodec == null) {
+                  final c = (s["Codec"] ?? "").toString().toUpperCase();
+                  final ch = (s["ChannelLayout"] ?? "").toString();
+                  if (c == "EAC3") aCodec = ch.isNotEmpty ? "DD+ $ch" : "DD+";
+                  else if (c == "AC3") aCodec = ch.isNotEmpty ? "DD $ch" : "DD 5.1";
+                  else if (c.isNotEmpty) aCodec = ch.isNotEmpty ? "$c $ch" : c;
+                }
+              }
+            }
+            if (vRes == null) {
+              if (path.contains("2160p") || path.contains("4k")) vRes = "4K";
+              else if (path.contains("1080p")) vRes = "1080p";
+              else if (path.contains("720p")) vRes = "720p";
+            }
+            if (vCodec == null) {
+              if (path.contains("x265") || path.contains("hevc")) vCodec = "HEVC";
+              else if (path.contains("x264") || path.contains("h264")) vCodec = "H.264";
+            }
+            if (aCodec == null) {
+              if (path.contains("eac3")) aCodec = "DD+ 5.1";
+              else if (path.contains("dts")) aCodec = "DTS";
+              else if (path.contains("5.1")) aCodec = "DD 5.1";
+            }
+            if (vRes != null) badges.add(vRes);
+            if (vCodec != null) badges.add(vCodec);
+            if (aCodec != null) badges.add(aCodec);
+            final genres = (item["Genres"] as List<dynamic>?) ?? [];
+            for (final g in genres.take(2)) {
+              final gs = g.toString().trim();
+              if (gs.isNotEmpty) badges.add(gs);
+            }
+
+            final overview = (item["Overview"] ?? "").toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+
             seenSeries.add(rawName.toLowerCase());
             parsed.add(
               JellyfinItem(
@@ -252,6 +347,11 @@ class JellyfinService extends ChangeNotifier {
                 name: rawName,
                 subtitle: epName,
                 imageUrl: "$baseUrl/Items/$id/Images/$imgType?maxHeight=320&quality=85",
+                backdropUrl: backdropUrl,
+                overview: overview,
+                rating: rating,
+                runtime: runtime,
+                badges: badges,
               ),
             );
             if (parsed.length >= 12) break;

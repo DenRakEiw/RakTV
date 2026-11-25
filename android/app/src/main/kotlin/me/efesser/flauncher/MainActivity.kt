@@ -19,6 +19,9 @@ import android.content.pm.*
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.media.tv.TvContract
+import android.media.tv.TvInputInfo
+import android.media.tv.TvInputManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -57,6 +60,7 @@ class MainActivity : FlutterActivity() {
                 "getMemoryInfo" -> result.success(getMemoryInfo())
                 "boostRam" -> result.success(boostRam())
                 "listLocalMedia" -> result.success(listLocalMedia(call.arguments as? String))
+                "switchHdmiInput" -> result.success(switchHdmiInput((call.arguments as? Int) ?: 1))
                 else -> throw IllegalArgumentException()
             }
         }
@@ -285,6 +289,33 @@ class MainActivity : FlutterActivity() {
         true
     } catch (e: Exception) {
         false
+    }
+
+    private fun switchHdmiInput(port: Int): Boolean {
+        return try {
+            val tvInputManager = getSystemService(Context.TV_INPUT_SERVICE) as? TvInputManager
+            val inputs = tvInputManager?.tvInputList ?: emptyList()
+            val hdmiInputs = inputs.filter { it.type == TvInputInfo.TYPE_HDMI }
+            val targetInput = hdmiInputs.firstOrNull {
+                it.id.contains("HDMI$port", ignoreCase = true) ||
+                it.id.contains("HW$port", ignoreCase = true) ||
+                it.id.endsWith("/$port") ||
+                it.loadLabel(this).toString().contains("$port")
+            } ?: hdmiInputs.getOrNull((port - 1).coerceAtLeast(0))
+
+            if (targetInput != null) {
+                val uri = TvContract.buildChannelUriForPassthroughInput(targetInput.id)
+                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+                true
+            } else {
+                launchApp("com.tcl.tv")
+            }
+        } catch (e: Exception) {
+            launchApp("com.tcl.tv")
+        }
     }
 
     private fun drawableToByteArray(drawable: Drawable): ByteArray? {

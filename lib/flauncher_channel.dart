@@ -64,6 +64,15 @@ class FLauncherChannel {
     }
   }
 
+  Future<bool> switchHdmiInput(int port) async {
+    try {
+      final res = await _methodChannel.invokeMethod<bool>("switchHdmiInput", port);
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void addAppsChangedListener(void Function(Map<dynamic, dynamic>) listener) =>
       _eventChannel.receiveBroadcastStream().listen((event) => listener(event));
 }

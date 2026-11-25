@@ -16,10 +16,13 @@ import 'dart:ui';
 import 'package:flauncher/custom_traversal_policy.dart';
 import 'package:flauncher/database.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/jellyfin_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
 import 'package:flauncher/widgets/category_row.dart';
+import 'package:flauncher/widgets/frigate_pip_overlay.dart';
+import 'package:flauncher/widgets/hdmi_inputs_row.dart';
 import 'package:flauncher/widgets/jellyfin_row.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/widgets/time_widget.dart';
@@ -148,10 +151,44 @@ class _FLauncherState extends State<FLauncher> {
               wallpaper.gradient.gradient,
             ),
           ),
-          if (settings.nightDimmerLevel > 0)
+          if (settings.ps5BackdropPreviewEnabled)
+            Consumer<JellyfinService>(
+              builder: (_, jellyfin, __) {
+                final focused = jellyfin.focusedItem;
+                return AnimatedSwitcher(
+                  duration: Duration(milliseconds: 350),
+                  child: (focused != null && focused.backdropUrl.isNotEmpty)
+                      ? Stack(
+                          key: ValueKey("ps5_backdrop_${focused.id}"),
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(
+                              focused.backdropUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => SizedBox.shrink(),
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.35),
+                                    Colors.black.withOpacity(0.72),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : SizedBox.shrink(key: ValueKey("ps5_backdrop_none")),
+                );
+              },
+            ),
+          if (settings.effectiveNightDimmerLevel > 0)
             IgnorePointer(
               child: Container(
-                color: Colors.black.withOpacity(settings.nightDimmerLevel),
+                color: Colors.black.withOpacity(settings.effectiveNightDimmerLevel),
               ),
             ),
           Visibility(
@@ -188,6 +225,13 @@ class _FLauncherState extends State<FLauncher> {
                 ),
               ),
             ),
+          Positioned(
+            top: 68,
+            right: 24,
+            child: IgnorePointer(
+              child: FrigatePipOverlay(),
+            ),
+          ),
         ],
       ),
     );
@@ -222,6 +266,7 @@ class _FLauncherState extends State<FLauncher> {
             ),
           ),
         JellyfinRow(),
+        HdmiInputsRow(),
         ...categoriesWithApps.map((categoryWithApps) {
           final visibleApps = settings.vaultUnlocked
               ? categoryWithApps.applications

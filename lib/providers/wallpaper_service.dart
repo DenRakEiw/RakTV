@@ -113,7 +113,9 @@ class WallpaperService extends ChangeNotifier {
     final settings = _settingsService;
     if (settings == null) return;
     if (settings.wallpaperSource == "reddit") {
-      final sub = settings.vaultUnlocked ? settings.vaultSubreddit : settings.redditSubreddit;
+      final sub = settings.vaultUnlocked
+          ? settings.vaultSubreddit
+          : (settings.isAutoNightShiftActive ? "Moescape" : settings.redditSubreddit);
       await fetchRedditWallpaper(sub);
     } else if (settings.wallpaperSource == "local_folder") {
       await nextLocalFolderWallpaper();
@@ -128,7 +130,9 @@ class WallpaperService extends ChangeNotifier {
     final rawSub = customSubreddit ??
         (_settingsService?.vaultUnlocked == true
             ? _settingsService?.vaultSubreddit
-            : _settingsService?.redditSubreddit) ??
+            : (_settingsService?.isAutoNightShiftActive == true
+                ? "Moescape"
+                : _settingsService?.redditSubreddit)) ??
         "AnimeWallpaper";
     final subs = rawSub.split(",").map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
     final sub = subs.isEmpty ? "AnimeWallpaper" : subs[_random.nextInt(subs.length)];

@@ -37,6 +37,11 @@ const _jellyfinEnabledKey = "raktv_jellyfin_enabled";
 const _jellyfinServerUrlKey = "raktv_jellyfin_server_url";
 const _jellyfinApiKeyKey = "raktv_jellyfin_api_key";
 const _systemHudEnabledKey = "raktv_system_hud_enabled";
+const _ps5BackdropPreviewKey = "raktv_ps5_backdrop_preview_enabled";
+const _autoNightShiftKey = "raktv_auto_night_shift_enabled";
+const _showHdmiCardsKey = "raktv_show_hdmi_cards_enabled";
+const _frigateAlertsKey = "raktv_frigate_alerts_enabled";
+const _frigateServerUrlKey = "raktv_frigate_server_url";
 
 class SettingsService extends ChangeNotifier {
   final SharedPreferences _sharedPreferences;
@@ -73,6 +78,24 @@ class SettingsService extends ChangeNotifier {
   String get jellyfinServerUrl => _sharedPreferences.getString(_jellyfinServerUrlKey) ?? "";
   String get jellyfinApiKey => _sharedPreferences.getString(_jellyfinApiKeyKey) ?? "";
   bool get systemHudEnabled => _sharedPreferences.getBool(_systemHudEnabledKey) ?? false;
+  bool get ps5BackdropPreviewEnabled => _sharedPreferences.getBool(_ps5BackdropPreviewKey) ?? true;
+  bool get autoNightShiftEnabled => _sharedPreferences.getBool(_autoNightShiftKey) ?? false;
+  bool get showHdmiCardsEnabled => _sharedPreferences.getBool(_showHdmiCardsKey) ?? false;
+  bool get frigateAlertsEnabled => _sharedPreferences.getBool(_frigateAlertsKey) ?? true;
+  String get frigateServerUrl => _sharedPreferences.getString(_frigateServerUrlKey) ?? "";
+
+  bool get isAutoNightShiftActive {
+    if (!autoNightShiftEnabled) return false;
+    final h = DateTime.now().hour;
+    return h >= 22 || h < 7;
+  }
+
+  double get effectiveNightDimmerLevel {
+    if (isAutoNightShiftActive) {
+      return nightDimmerLevel < 0.40 ? 0.40 : nightDimmerLevel;
+    }
+    return nightDimmerLevel;
+  }
 
   SettingsService(this._sharedPreferences);
 
@@ -222,6 +245,31 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setSystemHudEnabled(bool enabled) async {
     await _sharedPreferences.setBool(_systemHudEnabledKey, enabled);
+    notifyListeners();
+  }
+
+  Future<void> setPs5BackdropPreviewEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_ps5BackdropPreviewKey, enabled);
+    notifyListeners();
+  }
+
+  Future<void> setAutoNightShiftEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_autoNightShiftKey, enabled);
+    notifyListeners();
+  }
+
+  Future<void> setShowHdmiCardsEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_showHdmiCardsKey, enabled);
+    notifyListeners();
+  }
+
+  Future<void> setFrigateAlertsEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_frigateAlertsKey, enabled);
+    notifyListeners();
+  }
+
+  Future<void> setFrigateServerUrl(String url) async {
+    await _sharedPreferences.setString(_frigateServerUrlKey, url.trim());
     notifyListeners();
   }
 }

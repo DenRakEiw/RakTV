@@ -62,11 +62,98 @@ class JellyfinRow extends StatelessWidget {
                     },
                   ),
                 ),
+                if (settings.ps5BackdropPreviewEnabled && jellyfin.focusedItem != null)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16, 10, 16, 2),
+                    child: _Ps5MovieInfoBar(item: jellyfin.focusedItem!, accentColor: accent),
+                  ),
               ],
             ),
           );
         },
       );
+}
+
+class _Ps5MovieInfoBar extends StatelessWidget {
+  final JellyfinItem item;
+  final Color accentColor;
+
+  const _Ps5MovieInfoBar({required this.item, required this.accentColor});
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <String>[
+      if (item.rating.isNotEmpty) item.rating,
+      if (item.subtitle.isNotEmpty) item.subtitle,
+      if (item.runtime.isNotEmpty) item.runtime,
+      ...item.badges,
+    ];
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accentColor.withOpacity(0.6), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.play_circle_fill, color: accentColor, size: 18),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  item.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: 12),
+              ...chips.map(
+                (c) => Padding(
+                  padding: EdgeInsets.only(right: 6),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: c.startsWith("⭐") ? Colors.amber.withOpacity(0.22) : Colors.white12,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: c.startsWith("⭐") ? Colors.amberAccent : Colors.white24,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      c,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: c.startsWith("⭐") ? Colors.amberAccent : Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (item.overview.isNotEmpty) ...[
+            SizedBox(height: 5),
+            Text(
+              item.overview,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _JellyfinPosterCard extends StatefulWidget {
@@ -89,9 +176,18 @@ class _JellyfinPosterCardState extends State<_JellyfinPosterCard> {
   }
 
   void _onFocusChanged() {
-    if (mounted) {
-      setState(() {});
+    if (!mounted) return;
+    final jf = context.read<JellyfinService>();
+    if (_focusNode.hasPrimaryFocus) {
+      jf.setFocusedItem(widget.item);
+    } else if (jf.focusedItem?.id == widget.item.id) {
+      Future.microtask(() {
+        if (mounted && !_focusNode.hasPrimaryFocus && jf.focusedItem?.id == widget.item.id) {
+          jf.setFocusedItem(null);
+        }
+      });
     }
+    setState(() {});
   }
 
   @override

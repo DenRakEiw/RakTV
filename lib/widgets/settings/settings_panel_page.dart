@@ -10,6 +10,7 @@
  */
 
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/frigate_service.dart';
 import 'package:flauncher/providers/jellyfin_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/ensure_visible.dart';
@@ -198,6 +199,20 @@ class SettingsPanelPage extends StatelessWidget {
                     settingsService.setNightDimmerLevel(next);
                   },
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  value: settingsService.autoNightShiftEnabled,
+                  onChanged: (value) => settingsService.setAutoNightShiftEnabled(value),
+                  title: Text("Auto-Night-Shift (22:00–07:00 OLED Dimmer & Night Art)"),
+                  dense: true,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  value: settingsService.showHdmiCardsEnabled,
+                  onChanged: (value) => settingsService.setShowHdmiCardsEnabled(value),
+                  title: Text("Show Direct HDMI Input Cards (HDMI 1–3)"),
+                  dense: true,
+                ),
                 Divider(),
                 // Jellyfin Integration
                 SwitchListTile(
@@ -205,6 +220,13 @@ class SettingsPanelPage extends StatelessWidget {
                   value: settingsService.jellyfinEnabled,
                   onChanged: (value) => settingsService.setJellyfinEnabled(value),
                   title: Text("Jellyfin Home Row"),
+                  dense: true,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  value: settingsService.ps5BackdropPreviewEnabled,
+                  onChanged: (value) => settingsService.setPs5BackdropPreviewEnabled(value),
+                  title: Text("PS5-Style Dynamic Movie Backdrop Preview"),
                   dense: true,
                 ),
                 TextButton(
@@ -222,6 +244,31 @@ class SettingsPanelPage extends StatelessWidget {
                   ),
                   onPressed: () => _showJellyfinDialog(context, settingsService),
                 ),
+                Divider(),
+                // Frigate Live Camera & Person Alert PiP
+                SwitchListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  value: settingsService.frigateAlertsEnabled,
+                  onChanged: (value) => settingsService.setFrigateAlertsEnabled(value),
+                  title: Text("Frigate AI Camera Person Alerts (10s PiP)"),
+                  dense: true,
+                ),
+                TextButton(
+                  child: Row(
+                    children: [
+                      Icon(Icons.videocam_outlined, color: accent),
+                      Container(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Configure / Preview Frigate Camera PiP",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                  onPressed: () => _showFrigateDialog(context, settingsService),
+                ),
+                Divider(),
                 // System HUD (Weather + RAM + Jellyfin Status)
                 SwitchListTile(
                   contentPadding: EdgeInsets.symmetric(horizontal: 8),
@@ -347,6 +394,61 @@ class SettingsPanelPage extends StatelessWidget {
             onPressed: () async {
               await settings.setJellyfinServerUrl(urlCtrl.text);
               await settings.setJellyfinApiKey(keyCtrl.text);
+              Navigator.of(dCtx).pop();
+            },
+            child: Text("Save"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showFrigateDialog(BuildContext context, SettingsService settings) async {
+    final frigate = context.read<FrigateService>();
+    final urlCtrl = TextEditingController(text: frigate.activeServerUrl);
+
+    await showDialog(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: Text("Frigate AI Camera (10s PiP)"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: urlCtrl,
+              decoration: InputDecoration(
+                labelText: "Frigate Server URL (e.g. http://192.168.1.100:5000)",
+              ),
+            ),
+            if (frigate.cameras.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Text(
+                "Detected Cameras: ${frigate.cameras.join(', ')}",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await frigate.discoverOnLan();
+              urlCtrl.text = frigate.activeServerUrl;
+            },
+            child: Text("Auto-Discover LAN"),
+          ),
+          TextButton(
+            onPressed: () async {
+              await settings.setFrigateServerUrl(urlCtrl.text);
+              Navigator.of(dCtx).pop();
+              await frigate.showCameraPip(durationSeconds: 10);
+            },
+            child: Text("Preview 10s PiP"),
+          ),
+          TextButton(
+            onPressed: () async {
+              await settings.setFrigateServerUrl(urlCtrl.text);
               Navigator.of(dCtx).pop();
             },
             child: Text("Save"),
