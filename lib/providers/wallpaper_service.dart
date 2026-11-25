@@ -87,8 +87,16 @@ class WallpaperService extends ChangeNotifier {
       _wallpaper = await _wallpaperFile.readAsBytes();
       notifyListeners();
     } else {
-      // Auto-load initial wallpaper from r/AnimeWallpaper on first launch
-      unawaited(fetchRedditWallpaper("AnimeWallpaper"));
+      final seeded = File("/sdcard/Pictures/waifu_4k_1.jpg");
+      if (await seeded.exists()) {
+        final bytes = await seeded.readAsBytes();
+        await _wallpaperFile.writeAsBytes(bytes);
+        _wallpaper = bytes;
+        _currentWallpaperCaption = "4K Anime Wallpaper";
+        notifyListeners();
+      } else {
+        unawaited(fetchRedditWallpaper("Moescape"));
+      }
     }
     _setupAutoRotateTimer();
   }

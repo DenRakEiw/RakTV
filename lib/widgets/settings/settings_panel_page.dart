@@ -86,6 +86,26 @@ class SettingsPanelPage extends StatelessWidget {
                   ),
                   onPressed: () => Navigator.of(context).pushNamed(WallpaperPanelPage.routeName),
                 ),
+                TextButton(
+                  child: Row(
+                    children: [
+                      Icon(Icons.bolt, color: Colors.amberAccent),
+                      Container(width: 8),
+                      Text("1-Click RAM Boost", style: Theme.of(context).textTheme.bodyMedium),
+                    ],
+                  ),
+                  onPressed: () async {
+                    final res = await context.read<AppsService>().boostRam();
+                    final avail = res["availMb"] ?? 0;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        duration: Duration(seconds: 3),
+                        backgroundColor: Colors.black87,
+                        content: Text("⚡ RAM Boosted ($avail MB free)"),
+                      ),
+                    );
+                  },
+                ),
                 Divider(),
                 // Waifu Poster Mode (Auto-Idle UI Fade-Out)
                 TextButton(

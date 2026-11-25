@@ -52,11 +52,13 @@ class _FLauncherState extends State<FLauncher> {
   @override
   void initState() {
     super.initState();
+    RawKeyboard.instance.addListener(_handleGlobalKeyEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) => _resetIdleTimer());
   }
 
   @override
   void dispose() {
+    RawKeyboard.instance.removeListener(_handleGlobalKeyEvent);
     _idleTimer?.cancel();
     super.dispose();
   }
@@ -101,6 +103,7 @@ class _FLauncherState extends State<FLauncher> {
           }
           if (matched) {
             _konamiBuffer.clear();
+            if (!mounted) return;
             final settings = context.read<SettingsService>();
             settings.toggleVaultUnlocked();
             final unlocked = settings.vaultUnlocked;
@@ -133,67 +136,59 @@ class _FLauncherState extends State<FLauncher> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsService>();
-    return RawKeyboardListener(
-      focusNode: FocusNode(),
-      onKey: _handleGlobalKeyEvent,
-      child: FocusTraversalGroup(
-        policy: RowByRowTraversalPolicy(),
-        child: Stack(
-          children: [
-            Consumer<WallpaperService>(
-              builder: (_, wallpaper, __) => _wallpaper(
-                context,
-                wallpaper.wallpaperBytes,
-                wallpaper.activeVideoPath,
-                wallpaper.gradient.gradient,
+    return FocusTraversalGroup(
+      policy: RowByRowTraversalPolicy(),
+      child: Stack(
+        children: [
+          Consumer<WallpaperService>(
+            builder: (_, wallpaper, __) => _wallpaper(
+              context,
+              wallpaper.wallpaperBytes,
+              wallpaper.activeVideoPath,
+              wallpaper.gradient.gradient,
+            ),
+          ),
+          if (settings.nightDimmerLevel > 0)
+            IgnorePointer(
+              child: Container(
+                color: Colors.black.withOpacity(settings.nightDimmerLevel),
               ),
             ),
-            if (settings.nightDimmerLevel > 0)
-              IgnorePointer(
-                child: Container(
-                  color: Colors.black.withOpacity(settings.nightDimmerLevel),
+          Visibility(
+            visible: !_isIdlePosterMode,
+            maintainState: true,
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: _appBar(context, settings),
+              body: Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Consumer<AppsService>(
+                  builder: (context, appsService, _) => appsService.initialized
+                      ? SingleChildScrollView(
+                          child: _categories(context, appsService.categoriesWithApps, appsService.applications, settings),
+                        )
+                      : _emptyState(context),
                 ),
               ),
-            AnimatedOpacity(
-              duration: Duration(milliseconds: _isIdlePosterMode ? 800 : 200),
-              curve: Curves.easeInOut,
-              opacity: _isIdlePosterMode ? 0.0 : 1.0,
+            ),
+          ),
+          if (_isIdlePosterMode)
+            Positioned(
+              bottom: 24,
+              right: 32,
               child: IgnorePointer(
-                ignoring: _isIdlePosterMode,
-                child: Scaffold(
-                  backgroundColor: Colors.transparent,
-                  appBar: _appBar(context, settings),
-                  body: Padding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Consumer<AppsService>(
-                      builder: (context, appsService, _) => appsService.initialized
-                          ? SingleChildScrollView(
-                              child: _categories(context, appsService.categoriesWithApps, appsService.applications, settings),
-                            )
-                          : _emptyState(context),
-                    ),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white12),
                   ),
+                  child: TimeWidget(),
                 ),
               ),
             ),
-            if (_isIdlePosterMode)
-              Positioned(
-                bottom: 24,
-                right: 32,
-                child: IgnorePointer(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: TimeWidget(),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -286,56 +281,6 @@ class _FLauncherState extends State<FLauncher> {
           ],
         ),
         actions: [
-          if (settings.vaultUnlocked)
-            IconButton(
-              padding: EdgeInsets.all(2),
-              constraints: BoxConstraints(),
-              splashRadius: 20,
-              tooltip: "Lock Hidden Vault",
-              icon: Icon(Icons.lock_open, color: settings.neonAccentColor),
-              onPressed: () => settings.setVaultUnlocked(false),
-            ),
-          SizedBox(width: 12),
-          IconButton(
-            padding: EdgeInsets.all(2),
-            constraints: BoxConstraints(),
-            splashRadius: 20,
-            tooltip: "Next Wallpaper",
-            icon: Icon(Icons.auto_awesome_outlined),
-            onPressed: () => context.read<WallpaperService>().rotateWallpaperNow(),
-          ),
-          SizedBox(width: 12),
-          IconButton(
-            padding: EdgeInsets.all(2),
-            constraints: BoxConstraints(),
-            splashRadius: 20,
-            tooltip: "1-Click RAM Boost",
-            icon: Icon(Icons.bolt, color: Colors.amberAccent),
-            onPressed: () async {
-              final res = await context.read<AppsService>().boostRam();
-              final freed = res["freedMb"] ?? 0;
-              final avail = res["availMb"] ?? 0;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  duration: Duration(seconds: 3),
-                  backgroundColor: Colors.black87,
-                  content: Row(
-                    children: [
-                      Icon(Icons.bolt, color: Colors.amberAccent),
-                      SizedBox(width: 8),
-                      Text(
-                        freed > 0
-                            ? "⚡ RAM Boost: +$freed MB freed ($avail MB available)"
-                            : "⚡ RAM Optimized ($avail MB available)",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          SizedBox(width: 12),
           Stack(
             alignment: Alignment.center,
             children: [

@@ -19,7 +19,7 @@ class JellyfinRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Consumer2<JellyfinService, SettingsService>(
         builder: (context, jellyfin, settings, _) {
-          if (!settings.jellyfinEnabled || (!jellyfin.serverOnline && jellyfin.latestItems.isEmpty)) {
+          if (!settings.jellyfinEnabled || jellyfin.latestItems.isEmpty) {
             return SizedBox.shrink();
           }
           final accent = settings.neonAccentColor;
@@ -41,55 +41,27 @@ class JellyfinRow extends StatelessWidget {
                           shadows: [Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 8)],
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: jellyfin.serverOnline ? Color(0xFF00FF87) : Colors.redAccent,
-                          boxShadow: [
-                            if (jellyfin.serverOnline)
-                              BoxShadow(color: Color(0xFF00FF87).withOpacity(0.7), blurRadius: 6, spreadRadius: 1),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
-                if (jellyfin.latestItems.isNotEmpty)
-                  SizedBox(
-                    height: 135,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: jellyfin.latestItems.length,
-                      itemBuilder: (context, index) {
-                        final item = jellyfin.latestItems[index];
-                        return Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: EnsureVisible(
-                            alignment: 0.5,
-                            child: _JellyfinPosterCard(item: item, accentColor: accent),
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                else
-                  Padding(
-                    padding: EdgeInsets.only(left: 16),
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: BorderSide(color: accent.withOpacity(0.7)),
-                        backgroundColor: Colors.black38,
-                      ),
-                      icon: Icon(Icons.play_circle_outline, color: accent),
-                      label: Text("Open ${jellyfin.serverName} (${jellyfin.activeServerUrl})"),
-                      onPressed: () => context.read<AppsService>().launchPackage("org.jellyfin.androidtv"),
-                    ),
+                SizedBox(
+                  height: 135,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    itemCount: jellyfin.latestItems.length,
+                    itemBuilder: (context, index) {
+                      final item = jellyfin.latestItems[index];
+                      return Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: EnsureVisible(
+                          alignment: 0.5,
+                          child: _JellyfinPosterCard(item: item, accentColor: accent),
+                        ),
+                      );
+                    },
                   ),
+                ),
               ],
             ),
           );
