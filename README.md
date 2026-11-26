@@ -12,7 +12,7 @@
 
 ## 📸 Live Screenshots
 
-### 🏠 Home Screen (Jellyfin 16:9 "Newly Added" Poster Row, 4K Anime Wallpaper, Opah & Custom "YouTube FREEMIUM" Banner)
+### 🏠 Home Screen (Jellyfin 16:9 "Newly Added" Poster Row, 4K Anime Wallpaper & Live "Studio Ghibli Watercolor" Theme Pack)
 ![RakTV Home Screen](screenshots/raktv_home.png)
 
 ### 🎬 PS5-Style Dynamic Movie Backdrop Preview (Ratings, Codec Badges & German Overview)
