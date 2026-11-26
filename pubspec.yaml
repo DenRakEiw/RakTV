@@ -37,3 +37,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/themes/cyberpunk/
+    - assets/themes/anime/
+    - assets/themes/oled/
+    - assets/themes/synthwave/
+    - assets/themes/ps5/

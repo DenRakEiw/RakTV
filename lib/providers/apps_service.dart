@@ -111,6 +111,50 @@ class AppsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  static const Map<String, String> _themedAppAssets = {
+    "org.smarttube.stable": "youtube.jpg",
+    "com.google.android.youtube.tv": "youtube.jpg",
+    "com.netflix.ninja": "netflix.jpg",
+    "com.amazon.amazonvideo.livingroom": "prime.jpg",
+    "org.jellyfin.androidtv": "jellyfin.jpg",
+    "org.xbmc.kodi": "kodi.jpg",
+    "app.opah.tv": "opah.jpg",
+    "dev.trooped.tvquickbars": "quickbars.jpg",
+  };
+
+  Future<void> applyIconThemePack(String themePack) async {
+    _docsDir ??= await getApplicationDocumentsDirectory();
+    if (themePack == "default") {
+      for (final pkg in _themedAppAssets.keys) {
+        final file = File("${_docsDir!.path}/custom_banner_$pkg.img");
+        if (await file.exists()) {
+          await file.delete();
+        }
+        _customBanners.remove(pkg);
+      }
+      // Restore default YouTube Freemium banner for SmartTube
+      try {
+        final byteData = await rootBundle.load("assets/youtube_freemium.jpg");
+        final bytes = byteData.buffer.asUint8List();
+        await setCustomAppBanner("org.smarttube.stable", bytes);
+      } catch (_) {}
+      notifyListeners();
+      return;
+    }
+
+    for (final entry in _themedAppAssets.entries) {
+      try {
+        final assetPath = "assets/themes/$themePack/${entry.value}";
+        final byteData = await rootBundle.load(assetPath);
+        final bytes = byteData.buffer.asUint8List();
+        final file = File("${_docsDir!.path}/custom_banner_${entry.key}.img");
+        await file.writeAsBytes(bytes);
+        _customBanners[entry.key] = bytes;
+      } catch (_) {}
+    }
+    notifyListeners();
+  }
+
   Future<Map<String, int>> getMemoryInfo() => _fLauncherChannel.getMemoryInfo();
 
   Future<Map<String, int>> boostRam() => _fLauncherChannel.boostRam();

@@ -42,6 +42,7 @@ const _autoNightShiftKey = "raktv_auto_night_shift_enabled";
 const _showHdmiCardsKey = "raktv_show_hdmi_cards_enabled";
 const _frigateAlertsKey = "raktv_frigate_alerts_enabled";
 const _frigateServerUrlKey = "raktv_frigate_server_url";
+const _iconThemePackKey = "raktv_icon_theme_pack";
 
 class SettingsService extends ChangeNotifier {
   final SharedPreferences _sharedPreferences;
@@ -83,6 +84,7 @@ class SettingsService extends ChangeNotifier {
   bool get showHdmiCardsEnabled => _sharedPreferences.getBool(_showHdmiCardsKey) ?? false;
   bool get frigateAlertsEnabled => _sharedPreferences.getBool(_frigateAlertsKey) ?? true;
   String get frigateServerUrl => _sharedPreferences.getString(_frigateServerUrlKey) ?? "";
+  String get iconThemePack => _sharedPreferences.getString(_iconThemePackKey) ?? "default";
 
   bool get isAutoNightShiftActive {
     if (!autoNightShiftEnabled) return false;
@@ -270,6 +272,11 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setFrigateServerUrl(String url) async {
     await _sharedPreferences.setString(_frigateServerUrlKey, url.trim());
+    notifyListeners();
+  }
+
+  Future<void> setIconThemePack(String themePack) async {
+    await _sharedPreferences.setString(_iconThemePackKey, themePack);
     notifyListeners();
   }
 }

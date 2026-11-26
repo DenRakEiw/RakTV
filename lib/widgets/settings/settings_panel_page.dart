@@ -157,6 +157,34 @@ class SettingsPanelPage extends StatelessWidget {
                     settingsService.setNeonAccentColorValue(next["color"] as int);
                   },
                 ),
+                // 5-Theme App Banner Pack Switcher
+                TextButton(
+                  child: Row(
+                    children: [
+                      Icon(Icons.style_outlined, color: accent),
+                      Container(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Banner Theme: ${_themePackLabel(settingsService.iconThemePack)}",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                  onPressed: () async {
+                    const packs = ["default", "cyberpunk", "anime", "oled", "synthwave", "ps5"];
+                    final idx = packs.indexOf(settingsService.iconThemePack);
+                    final next = packs[(idx + 1) % packs.length];
+                    await settingsService.setIconThemePack(next);
+                    await context.read<AppsService>().applyIconThemePack(next);
+                    // Sync matching neon accent color for cohesive look
+                    if (next == "cyberpunk") settingsService.setNeonAccentColorValue(0xFFFF2A85);
+                    if (next == "anime") settingsService.setNeonAccentColorValue(0xFFB537F2);
+                    if (next == "oled") settingsService.setNeonAccentColorValue(0xFFFFC800);
+                    if (next == "synthwave") settingsService.setNeonAccentColorValue(0xFFFF2A85);
+                    if (next == "ps5") settingsService.setNeonAccentColorValue(0xFF00F0FF);
+                  },
+                ),
                 // Custom Font Family
                 TextButton(
                   child: Row(
@@ -456,5 +484,22 @@ class SettingsPanelPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _themePackLabel(String pack) {
+    switch (pack) {
+      case "cyberpunk":
+        return "Cyberpunk Neon";
+      case "anime":
+        return "Anime Glassmorphism";
+      case "oled":
+        return "OLED Minimal Dark";
+      case "synthwave":
+        return "Retro 80s Synthwave";
+      case "ps5":
+        return "PS5 Frosted Cinema";
+      default:
+        return "Original Default";
+    }
   }
 }
