@@ -25,10 +25,10 @@
 ### 🌸 Waifu Poster Mode (Auto-Idle Fade-Out with Floating Glass Clock)
 ![RakTV Waifu Poster Mode](screenshots/raktv_poster_mode.png)
 
-### 🎨 5 Built-In 1-Click Logo & App Banner Theme Packs (40 Custom 16:9 Tiles)
-Switch seamlessly in **RakTV Settings → Banner Theme** between **Cyberpunk Neon**, **Anime / Waifu Glassmorphism**, **OLED Minimal Dark**, **Retro 80s Synthwave**, and **PS5 / Frosted Cinema** (automatically syncs the matching Neon Glow accent color!):
+### 🎨 15 Built-In 1-Click Logo & App Banner Theme Packs (255 Custom 16:9 Tiles)
+Switch seamlessly in **RakTV Settings → Banner Theme** between **15 complete themes** (*Cyberpunk Neon*, *Anime Glassmorphism*, *OLED Minimal Dark*, *Retro 80s Synthwave*, *PS5 Frosted Cinema*, *Matrix Hacker Emerald*, *Studio Ghibli Watercolor*, *90s Vaporwave Marble*, *Walnut & Brushed Brass*, *16-Bit Pixel Arcade*, *Japanese Manga Ink*, *Nordic Aurora Frost*, *Art Deco Gold Noir*, *Iridescent Liquid Holo*, and *Obsidian Lava Ember*) — covering **every TV app** (*YouTube FREEMIUM, Netflix, Prime Video, Jellyfin, Kodi, Opah, QuickBars, Play Store, Aerial Views, Settings, Media Player, Quick Panel, Live TV*) **plus HDMI 1–3 cards**, automatically syncing the matching Neon Glow accent color!
 
-![RakTV 5 Theme Packs Showcase](screenshots/raktv_themes_showcase.jpg)
+![RakTV 15 Theme Packs Showcase](screenshots/raktv_themes_showcase.jpg)
 
 ---
 

@@ -172,17 +172,40 @@ class SettingsPanelPage extends StatelessWidget {
                     ],
                   ),
                   onPressed: () async {
-                    const packs = ["default", "cyberpunk", "anime", "oled", "synthwave", "ps5"];
+                    const packs = [
+                      "default",
+                      "cyberpunk",
+                      "anime",
+                      "oled",
+                      "synthwave",
+                      "ps5",
+                      "matrix",
+                      "ghibli",
+                      "vaporwave",
+                      "wood_luxury",
+                      "pixel_arcade",
+                      "manga_ink",
+                      "nordic_aurora",
+                      "gold_noir",
+                      "holographic",
+                      "volcanic_ember",
+                    ];
                     final idx = packs.indexOf(settingsService.iconThemePack);
                     final next = packs[(idx + 1) % packs.length];
                     await settingsService.setIconThemePack(next);
                     await context.read<AppsService>().applyIconThemePack(next);
                     // Sync matching neon accent color for cohesive look
-                    if (next == "cyberpunk") settingsService.setNeonAccentColorValue(0xFFFF2A85);
-                    if (next == "anime") settingsService.setNeonAccentColorValue(0xFFB537F2);
-                    if (next == "oled") settingsService.setNeonAccentColorValue(0xFFFFC800);
-                    if (next == "synthwave") settingsService.setNeonAccentColorValue(0xFFFF2A85);
-                    if (next == "ps5") settingsService.setNeonAccentColorValue(0xFF00F0FF);
+                    if (next == "cyberpunk" || next == "synthwave" || next == "vaporwave" || next == "manga_ink" || next == "volcanic_ember") {
+                      settingsService.setNeonAccentColorValue(0xFFFF2A85);
+                    } else if (next == "anime" || next == "holographic") {
+                      settingsService.setNeonAccentColorValue(0xFFB537F2);
+                    } else if (next == "oled" || next == "wood_luxury" || next == "gold_noir" || next == "ghibli") {
+                      settingsService.setNeonAccentColorValue(0xFFFFC800);
+                    } else if (next == "matrix" || next == "nordic_aurora") {
+                      settingsService.setNeonAccentColorValue(0xFF00FF87);
+                    } else if (next == "ps5" || next == "pixel_arcade") {
+                      settingsService.setNeonAccentColorValue(0xFF00F0FF);
+                    }
                   },
                 ),
                 // Custom Font Family
@@ -498,6 +521,26 @@ class SettingsPanelPage extends StatelessWidget {
         return "Retro 80s Synthwave";
       case "ps5":
         return "PS5 Frosted Cinema";
+      case "matrix":
+        return "Matrix Hacker Emerald";
+      case "ghibli":
+        return "Studio Ghibli Watercolor";
+      case "vaporwave":
+        return "90s Vaporwave Marble";
+      case "wood_luxury":
+        return "Walnut & Brushed Brass";
+      case "pixel_arcade":
+        return "16-Bit Pixel Arcade";
+      case "manga_ink":
+        return "Japanese Manga Ink";
+      case "nordic_aurora":
+        return "Nordic Aurora Frost";
+      case "gold_noir":
+        return "Art Deco Gold Noir";
+      case "holographic":
+        return "Iridescent Liquid Holo";
+      case "volcanic_ember":
+        return "Obsidian Lava Ember";
       default:
         return "Original Default";
     }

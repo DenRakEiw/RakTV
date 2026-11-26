@@ -67,6 +67,7 @@ class HdmiInputsRow extends StatelessWidget {
                             subtitle: entry["subtitle"] as String,
                             icon: entry["icon"] as IconData,
                             accentColor: accent,
+                            themePack: settings.iconThemePack,
                           ),
                         ),
                       );
@@ -86,6 +87,7 @@ class _HdmiInputCard extends StatefulWidget {
   final String subtitle;
   final IconData icon;
   final Color accentColor;
+  final String themePack;
 
   const _HdmiInputCard({
     required this.port,
@@ -93,6 +95,7 @@ class _HdmiInputCard extends StatefulWidget {
     required this.subtitle,
     required this.icon,
     required this.accentColor,
+    required this.themePack,
   });
 
   @override
@@ -149,32 +152,15 @@ class _HdmiInputCardState extends State<_HdmiInputCard> {
                 focusNode: _focusNode,
                 focusColor: Colors.transparent,
                 onTap: () => context.read<AppsService>().fLauncherChannel.switchHdmiInput(widget.port),
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(widget.icon, color: widget.accentColor, size: 32),
-                      SizedBox(height: 6),
-                      Text(
-                        widget.title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        widget.subtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white70,
-                          fontSize: 10,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
+                child: widget.themePack != "default"
+                    ? Image.asset(
+                        "assets/themes/${widget.themePack}/hdmi${widget.port}.jpg",
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (_, __, ___) => _buildDefaultContent(context),
+                      )
+                    : _buildDefaultContent(context),
               ),
             ),
           ),
@@ -182,4 +168,31 @@ class _HdmiInputCardState extends State<_HdmiInputCard> {
       ),
     );
   }
+
+  Widget _buildDefaultContent(BuildContext context) => Padding(
+        padding: EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(widget.icon, color: widget.accentColor, size: 32),
+            SizedBox(height: 6),
+            Text(
+              widget.title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              widget.subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white70,
+                fontSize: 10,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      );
 }

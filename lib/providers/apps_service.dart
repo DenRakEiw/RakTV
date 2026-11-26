@@ -120,6 +120,12 @@ class AppsService extends ChangeNotifier {
     "org.xbmc.kodi": "kodi.jpg",
     "app.opah.tv": "opah.jpg",
     "dev.trooped.tvquickbars": "quickbars.jpg",
+    "com.tcl.tv": "livetv.jpg",
+    "com.neilturner.aerialviews": "aerial.jpg",
+    "com.android.tv.settings": "settings.jpg",
+    "com.tcl.ui_mediaCenter": "mediaplayer.jpg",
+    "com.android.vending": "playstore.jpg",
+    "com.tcl.suspension": "quickpanel.jpg",
   };
 
   Future<void> applyIconThemePack(String themePack) async {
