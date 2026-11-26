@@ -12,8 +12,11 @@
 
 ## 📸 Live Screenshots
 
-### 🏠 Home Screen (Jellyfin 16:9 "Newly Added" Poster Row, 4K Anime Wallpaper & Custom "YouTube FREEMIUM" Banner)
+### 🏠 Home Screen (Jellyfin 16:9 "Newly Added" Poster Row, 4K Anime Wallpaper, Opah & Custom "YouTube FREEMIUM" Banner)
 ![RakTV Home Screen](screenshots/raktv_home.png)
+
+### 🎬 PS5-Style Dynamic Movie Backdrop Preview (Ratings, Codec Badges & German Overview)
+![RakTV PS5-Style Dynamic Backdrop Preview](screenshots/raktv_ps5_backdrop.png)
 
 | ⚙️ RakTV Pro & Ultra Settings | 🖼️ 4K Anime & Live Video Wallpaper Studio |
 | :---: | :---: |
